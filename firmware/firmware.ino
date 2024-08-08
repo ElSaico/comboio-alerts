@@ -2,7 +2,7 @@
 #include <MD_MAX72xx.h>
 #include <SPI.h>
 
-#include "fonts.h"
+#include "fonts.hpp"
 
 #define HARDWARE_TYPE MD_MAX72XX::PAROLA_HW
 #define MAX_DEVICES   10
