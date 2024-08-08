@@ -18,7 +18,7 @@ async function runFirmware(response: Response) {
   let segment: number | null = null;
 
   for (let i = 0; i < CHAIN_LENGTH; i++) {
-    matrix.value = [...matrix.value, new Uint8Array(8)];
+    matrix.value.push(new Uint8Array(8));
   }
 
   runner.spi.onByte = value => {
@@ -30,16 +30,15 @@ async function runFirmware(response: Response) {
       } else {
         console.log('out of bounds: %s %s', segment, value);
       }
-      if (display == CHAIN_LENGTH - 1 && segment == 8) {
-        matrix.value = [...matrix.value]; // flush components
-      }
       display = (display + 1) % CHAIN_LENGTH;
       segment = null;
     }
     runner.spi.completeTransfer(value);
   };
 
-  runner.execute(() => {});
+  runner.execute(() => {
+    matrix.value = [...matrix.value]; // flush components
+  });
 }
 
 function App() {
@@ -48,7 +47,7 @@ function App() {
   const ledHeight = 5;
 
   useEffect(() => {
-    fetch('/main.cpp').then(runFirmware);
+    fetch('/firmware/firmware.ino').then(runFirmware);
   }, []);
 
   return (
