@@ -25,14 +25,11 @@ import {
   twiConfig,
 } from 'avr8js';
 
-import { loadHex } from './intelhex';
 import { MicroTaskScheduler } from './task-scheduler';
 import { EEPROMLocalStorageBackend } from './eeprom';
 
-const FLASH = 0x8000;
-
 export default class AVRRunner {
-  readonly program = new Uint16Array(FLASH);
+  readonly program: Uint16Array;
   readonly cpu: CPU;
   readonly timer0: AVRTimer;
   readonly timer1: AVRTimer;
@@ -50,8 +47,8 @@ export default class AVRRunner {
   private serialBuffer: Array<number> = [];
   private stopped = false;
 
-  constructor(hex: string) {
-    loadHex(hex, new Uint8Array(this.program.buffer));
+  constructor(program: Uint16Array) {
+    this.program = program;
     this.cpu = new CPU(this.program);
 
     this.timer0 = new AVRTimer(this.cpu, timer0Config);

@@ -3,7 +3,7 @@ import { useEffect } from 'preact/hooks';
 import { signal } from '@preact/signals';
 
 import AVRRunner from './execute';
-import buildHex from './compile';
+import firmwareUrl from '../build/firmware.ino.with_bootloader.bin?url';
 
 const CHAIN_LENGTH = 10;
 const OFF_COLOR = '#444444';
@@ -11,9 +11,8 @@ const OFF_COLOR = '#444444';
 const matrix = signal<Uint8Array[]>([]);
 
 async function runFirmware(response: Response) {
-  const source = await response.text();
-  const result = await buildHex(source);
-  const runner = new AVRRunner(result.hex);
+  const firmware = await response.arrayBuffer();
+  const runner = new AVRRunner(new Uint16Array(firmware));
   let display = 0;
   let segment: number | null = null;
 
@@ -47,7 +46,7 @@ function App() {
   const ledHeight = 5;
 
   useEffect(() => {
-    fetch('/firmware/firmware.ino').then(runFirmware);
+    fetch(firmwareUrl).then(runFirmware);
   }, []);
 
   return (
