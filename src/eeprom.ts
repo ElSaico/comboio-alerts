@@ -4,7 +4,7 @@
  *
  * Copyright (C) 2019, Uri Shaked
  */
-import { EEPROMBackend } from 'avr8js';
+import type { EEPROMBackend } from 'avr8js';
 
 function zeroPad(value: string, minLength: number) {
   while (value.length < minLength) {
