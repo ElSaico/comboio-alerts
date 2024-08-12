@@ -10,7 +10,6 @@ import {
   AVRTimer,
   CPU,
   AVRIOPort,
-  AVREEPROM,
   AVRUSART,
   AVRSPI,
   AVRTWI,
@@ -26,7 +25,6 @@ import {
 } from 'avr8js';
 
 import { MicroTaskScheduler } from './task-scheduler';
-import { EEPROMLocalStorageBackend } from './eeprom';
 
 export default class AVRRunner {
   readonly program: Uint16Array;
@@ -37,7 +35,6 @@ export default class AVRRunner {
   readonly portB: AVRIOPort;
   readonly portC: AVRIOPort;
   readonly portD: AVRIOPort;
-  readonly eeprom: AVREEPROM;
   readonly usart: AVRUSART;
   readonly spi: AVRSPI;
   readonly twi: AVRTWI;
@@ -59,7 +56,6 @@ export default class AVRRunner {
     this.portC = new AVRIOPort(this.cpu, portCConfig);
     this.portD = new AVRIOPort(this.cpu, portDConfig);
 
-    this.eeprom = new AVREEPROM(this.cpu, new EEPROMLocalStorageBackend());
     this.usart = new AVRUSART(this.cpu, usart0Config, this.frequency);
     this.spi = new AVRSPI(this.cpu, spiConfig, this.frequency);
     this.twi = new AVRTWI(this.cpu, twiConfig, this.frequency);
