@@ -1,13 +1,15 @@
 <script lang="ts">
+  import type { Readable } from "svelte/store";
+
   const OFF_COLOR = '#444444';
 
   export let ledWidth: number;
   export let ledHeight: number;
   export let color: string;
-  export let matrix: Uint8Array[];
+  export let modules: Readable<Uint8Array[]>;
 </script>
 
-{#each matrix as display}
+{#each $modules as display}
   <svg xmlns="http://www.w3.org/2000/svg" width={ledWidth * 8} height={ledHeight * 8}>
     {#each display as row, y}
       {#each Array(8) as _, x}
