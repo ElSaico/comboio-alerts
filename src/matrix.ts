@@ -2,7 +2,9 @@ import { derived, type Invalidator, type Subscriber, type Writable, writable } f
 
 class Matrix {
   protected TOTAL_MODULES = 54;
-  protected ZONES = [ [0, 24], [24, 34], [34, 44], [44, 54] ];
+  // Parola numbers the modules right-to-left, but due to chain propagation data is sent left-to-right,
+  // hence why indexing differs from the firmware
+  protected ZONES = [ 54, 30, 20, 10, 0 ];
   protected display = 0;
   protected opcode: number | null = null;
   protected store: Writable<Uint8Array[]>;
@@ -33,7 +35,7 @@ class Matrix {
   }
 
   public zone(n: number) {
-    return derived(this.store, $store => $store.slice(...this.ZONES[n]));
+    return derived(this.store, $store => $store.slice(this.ZONES[n+1], this.ZONES[n]));
   }
 }
 

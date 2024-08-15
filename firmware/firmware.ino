@@ -7,23 +7,27 @@
 #define HARDWARE_TYPE MD_MAX72XX::PAROLA_HW
 #define MAX_DEVICES   54
 #define CS_PIN        10
+#define NUM_ZONES     4
 
 auto P = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
-String labels[3];
+uint8_t ZONES[] = { 0, 24, 34, 44, 54 };
+String labels[NUM_ZONES-1];
 
 void setup() {
   Serial.begin(9600);
-  P.begin(4);
-  P.setZone(0,  0, 23);
-  P.setZone(1, 24, 33);
-  P.setZone(2, 34, 43);
-  P.setZone(3, 44, 53);
-  P.displayReset();
-  P.displayZoneText(1, "Hello World!", PA_CENTER, P.getSpeed(), 1000, PA_SCROLL_DOWN, PA_SCROLL_DOWN);
+  P.begin(NUM_ZONES);
+  for (uint8_t i = 0; i < NUM_ZONES; i++) {
+    P.setZone(i, ZONES[i], ZONES[i+1]-1);
+  }
 }
 
 void loop() {
-  if (P.displayAnimate()) {
-    P.getZoneStatus(0);
+  static uint8_t zone = 0;
+
+  P.displayZoneText(zone, "Hello World!", PA_LEFT, P.getSpeed(), 1000, PA_SCROLL_DOWN, PA_SCROLL_DOWN);
+  while (!P.getZoneStatus(zone)) {
+    P.displayAnimate();
   }
+
+  zone = (zone + 1) % NUM_ZONES;
 }
