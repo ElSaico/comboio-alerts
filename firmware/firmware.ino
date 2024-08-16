@@ -11,6 +11,7 @@
 
 auto P = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
 uint8_t ZONES[] = { 0, 24, 34, 44, 54 };
+uint8_t flushZones = 0;
 String labels[NUM_ZONES-1];
 
 void setup() {
@@ -22,12 +23,11 @@ void setup() {
 }
 
 void loop() {
-  static uint8_t zone = 0;
-
-  P.displayZoneText(zone, "Hello World!", PA_LEFT, P.getSpeed(), 1000, PA_SCROLL_DOWN, PA_SCROLL_DOWN);
-  while (!P.getZoneStatus(zone)) {
-    P.displayAnimate();
+  if (P.displayAnimate()) {
+    for (uint8_t i = 1; i < NUM_ZONES; i++) {
+      if (flushZones & (1 << i)) {
+        P.displayReset(i);
+      }
+    }
   }
-
-  zone = (zone + 1) % NUM_ZONES;
 }
