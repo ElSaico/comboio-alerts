@@ -11,6 +11,14 @@
 #define NUM_ZONES     4
 
 enum Stage { TARGET, EVENT_TYPE, NUMBER, USERNAME, MESSAGE };
+enum EventType : char {
+  FOLLOWER = 'F',
+  SUB_NEW = 'S',
+  SUB_RENEW = 's',
+  SUB_GIFT = 'G',
+  CHEER = 'C',
+  RAID = 'R',
+};
 
 auto P = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
 uint8_t ZONES[] = { 0, 24, 34, 44, 54 };
@@ -25,14 +33,33 @@ void setup() {
   }
 }
 
-void onEvent(char target, char eventType, uint32_t num, char* user, char* message = nullptr) {
-  
+void onAlertBar(EventType eventType, uint32_t num, char* user, char* message = nullptr) {
+}
+
+void onLabel(EventType eventType, uint32_t num, char* user) {
+  uint8_t zone;
+  switch (eventType) {
+    case FOLLOWER:
+      zone = 1;
+      break;
+    case SUB_NEW: case SUB_RENEW:
+      zone = 2;
+      break;
+    case CHEER:
+      zone = 3;
+      break;
+    default:
+      Serial << "invalid e=" << eventType << " for t=L" << endl;
+      return;
+  }
+  P.displayZoneText(zone, user, PA_LEFT, 500, 0, PA_SCROLL_LEFT);
+  flushZones |= 1 << zone;
 }
 
 void readSerial() {
   static Stage stage = TARGET;
   static char target;
-  static char eventType;
+  static EventType eventType;
   static uint32_t num; // talk about future-proofing; are we ever getting a raid > 65535?
   static char user[64]; // TODO check Twitch limit
   static uint8_t userSize;
@@ -42,15 +69,19 @@ void readSerial() {
   char rc = Serial.read();
   switch (stage) {
     case TARGET:
-      target = rc;
-      stage = EVENT_TYPE;
-      Serial << "t=" << target;
+      if (rc == 'A' || rc == 'L') {
+        target = rc;
+        stage = EVENT_TYPE;
+        Serial << "t=" << target;
+      } else {
+        Serial << "invalid t=" << rc << endl;
+      }
       break;
     case EVENT_TYPE:
-      eventType = rc;
+      eventType = (EventType)rc;
       stage = NUMBER;
       num = 0;
-      Serial << " e=" << eventType;
+      Serial << " e=" << rc;
       break;
     case NUMBER:
       if (rc != '\n') {
@@ -68,20 +99,23 @@ void readSerial() {
       } else {
         user[userSize] = '\0';
         Serial << "u=" << user << endl;
-        switch (eventType) {
-          case 'F': case 'G': case 'R':
-            stage = TARGET;
-            onEvent(target, eventType, num, user);
-            Serial.println("sent");
-            break;
-          case 'S': case 's': case 'C':
-            stage = MESSAGE;
-            messageSize = 0;
-            break;
-          default:
-            stage = TARGET;
-            Serial << "invalid e=" << eventType << endl;
-            break;
+        if (target == 'A') {
+          switch (eventType) {
+            case FOLLOWER: case SUB_GIFT: case RAID:
+              stage = TARGET;
+              onAlertBar(eventType, num, user);
+              break;
+            case SUB_NEW: case SUB_RENEW: case CHEER:
+              stage = MESSAGE;
+              messageSize = 0;
+              break;
+            default:
+              stage = TARGET;
+              Serial << "invalid e=" << eventType << endl;
+          }
+        } else {
+          stage = TARGET;
+          onLabel(eventType, num, user);
         }
       }
       break;
@@ -91,9 +125,8 @@ void readSerial() {
       } else {
         message[messageSize] = '\0';
         stage = TARGET;
-        onEvent(target, eventType, num, user, message);
+        onAlertBar(eventType, num, user, message);
         Serial << "m=" << message << endl;
-        Serial.println("sent");
       }
       break;
     default:
