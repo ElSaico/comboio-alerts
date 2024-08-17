@@ -3,21 +3,24 @@ comboio-alerts
 
 ## The Protocol
 
-Spaces are merely for convenience of the reader and are not part of the messages.
-
-* **M *t n...* \0 *u...* \0 [*m...* \0]** - display notification on the alert bar
-* **L *t n...* \0 *u...* \0** - update label
+```
+t e n <LF> u <LF> [m <LF>]
+```
+Spaces are merely for convenience of the reader and are not part of the data.
 
 ### Parameters
 
-* ***t*** - type of event; can be one of:
+* ***t*** - target; can be one of:
+    * **A** - alert bar
+    * **L** - label
+* ***e*** - event type; can be one of:
     * **F** - new follower
     * **S** - new subscription
     * **s** - subscription renewal
     * **G** - subscription gift
     * **C** - cheers
     * **R** - raid
-* **\0** - null character
-* ***n...*** - number related to event (months subscribed, amount of gifts/bits, users raiding, etc.; ignored for new follow)
-* ***u...*** - user who triggered the event
-* ***m...*** - additional message (subs and cheers only)
+* ***n*** - number related to event (months subscribed, amount of gifts/bits, users raiding, etc.; ignored for new follow)
+* ***u*** - user who triggered the event
+* ***m*** - additional message (subs and cheers only)
+* **\<LF\>** - newline character
