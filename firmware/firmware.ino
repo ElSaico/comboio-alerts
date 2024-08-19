@@ -6,9 +6,13 @@
 #include "fonts.hpp"
 
 #define HARDWARE_TYPE MD_MAX72XX::PAROLA_HW
-#define MAX_DEVICES   54
 #define CS_PIN        10
+#define MAX_DEVICES   54
+#define MAX_LABEL     36 // up to 25 for username + 3 for " ()" + '\0'; 7 remain for amount
+#define MAX_MESSAGE   512
 #define NUM_ZONES     4
+
+const uint8_t ZONES[] PROGMEM = { 0, 24, 34, 44, 54 };
 
 enum Stage { TARGET, EVENT_TYPE, NUMBER, USERNAME, MESSAGE };
 enum EventType : char {
@@ -21,15 +25,17 @@ enum EventType : char {
 };
 
 auto P = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
-uint8_t ZONES[] = { 0, 24, 34, 44, 54 };
 uint8_t flushZones = 0;
-String labels[NUM_ZONES-1];
+char labels[NUM_ZONES-1][MAX_LABEL];
 
 void setup() {
   Serial.begin(9600);
   P.begin(NUM_ZONES);
   for (uint8_t i = 0; i < NUM_ZONES; i++) {
     P.setZone(i, ZONES[i], ZONES[i+1]-1);
+  }
+  for (uint8_t i = 1; i < NUM_ZONES; i++) {
+    P.displayZoneText(i, labels[i-1], PA_LEFT, 60, 0, PA_SCROLL_LEFT, PA_SCROLL_LEFT);
   }
 }
 
@@ -52,7 +58,7 @@ void onLabel(EventType eventType, uint32_t num, char* user) {
       Serial << "invalid e=" << eventType << " for t=L" << endl;
       return;
   }
-  P.displayZoneText(zone, user, PA_LEFT, 500, 0, PA_SCROLL_LEFT);
+  strncpy_P(labels[zone-1], user, MAX_LABEL);
   flushZones |= 1 << zone;
 }
 
@@ -61,9 +67,9 @@ void readSerial() {
   static char target;
   static EventType eventType;
   static uint32_t num; // talk about future-proofing; are we ever getting a raid > 65535?
-  static char user[64]; // TODO check Twitch limit
+  static char user[MAX_LABEL];
   static uint8_t userSize;
-  static char message[512]; // TODO check Twitch limit
+  static char message[MAX_MESSAGE];
   static uint16_t messageSize;
 
   char rc = Serial.read();
@@ -141,8 +147,12 @@ void loop() {
 
   if (P.displayAnimate()) {
     for (uint8_t i = 1; i < NUM_ZONES; i++) {
-      if (flushZones & (1 << i)) {
+      if (P.getZoneStatus(i)) {
         P.displayReset(i);
+      }
+      if (flushZones & (1 << i)) {
+        flushZones &= ~(1 << i);
+        Serial << "reset label " << i << endl;
       }
     }
   }
