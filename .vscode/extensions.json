@@ -1,6 +1,6 @@
 {
   "recommendations": [
     "svelte.svelte-vscode",
-    "vsciot-vscode.vscode-arduino"
+    "vscode-arduino.vscode-arduino-community"
   ]
 }
