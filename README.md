@@ -22,5 +22,5 @@ Spaces are merely for convenience of the reader and are not part of the data.
     * **R** - raid
 * ***n*** - number related to event (months subscribed, amount of gifts/bits, users raiding, etc.; ignored for new follow)
 * ***u*** - user who triggered the event
-* ***m*** - additional message (subs and cheers only)
+* ***m*** - additional message (not applicable for new follow and sub gift)
 * **\<LF\>** - newline character

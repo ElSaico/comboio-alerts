@@ -107,11 +107,11 @@ void readSerial() {
         Serial << "u=" << user << endl;
         if (target == 'A') {
           switch (eventType) {
-            case FOLLOWER: case SUB_GIFT: case RAID:
+            case FOLLOWER: case SUB_GIFT:
               stage = TARGET;
               onAlertBar(eventType, num, user);
               break;
-            case SUB_NEW: case SUB_RENEW: case CHEER:
+            case SUB_NEW: case SUB_RENEW: case CHEER: case RAID:
               stage = MESSAGE;
               messageSize = 0;
               break;
