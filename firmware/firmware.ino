@@ -5,12 +5,21 @@
 
 #include "fonts.hpp"
 
+#define BAUD_RATE     9600
 #define HARDWARE_TYPE MD_MAX72XX::PAROLA_HW
 #define CS_PIN        10
-#define MAX_DEVICES   54
-#define MAX_LABEL     36 // up to 25 for username + 3 for " ()" + '\0'; 7 remain for amount
+#define NUM_MODULES   54
+
+#define MAX_LABEL     36 // up to 25 for username + 4 for " ()\0"; this leaves a minimum of 7 for amount
 #define MAX_MESSAGE   512
+
 #define NUM_ZONES     4
+#define ZONE_FOLLOW   1
+#define ZONE_SUB      2
+#define ZONE_CHEER    3
+
+#define TARGET_ALERTS 'A'
+#define TARGET_LABEL  'L'
 
 const uint8_t ZONES[] PROGMEM = { 0, 24, 34, 44, 54 };
 
@@ -24,12 +33,12 @@ enum EventType : char {
   RAID = 'R',
 };
 
-auto P = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
+auto P = MD_Parola(HARDWARE_TYPE, CS_PIN, NUM_MODULES);
 uint8_t flushZones = 0;
 char labels[NUM_ZONES-1][MAX_LABEL];
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(BAUD_RATE);
   P.begin(NUM_ZONES);
   for (uint8_t i = 0; i < NUM_ZONES; i++) {
     P.setZone(i, ZONES[i], ZONES[i+1]-1);
@@ -46,13 +55,13 @@ void onLabel(EventType eventType, uint32_t num, char* user) {
   uint8_t zone;
   switch (eventType) {
     case FOLLOWER:
-      zone = 1;
+      zone = ZONE_FOLLOW;
       break;
     case SUB_NEW: case SUB_RENEW:
-      zone = 2;
+      zone = ZONE_SUB;
       break;
     case CHEER:
-      zone = 3;
+      zone = ZONE_CHEER;
       break;
     default:
       Serial << "invalid e=" << eventType << " for t=L" << endl;
@@ -75,7 +84,7 @@ void readSerial() {
   char rc = Serial.read();
   switch (stage) {
     case TARGET:
-      if (rc == 'A' || rc == 'L') {
+      if (rc == TARGET_ALERTS || rc == TARGET_LABEL) {
         target = rc;
         stage = EVENT_TYPE;
         Serial << "t=" << target;
@@ -105,7 +114,7 @@ void readSerial() {
       } else {
         user[userSize] = '\0';
         Serial << "u=" << user << endl;
-        if (target == 'A') {
+        if (target == TARGET_ALERTS) {
           switch (eventType) {
             case FOLLOWER: case SUB_GIFT:
               stage = TARGET;
