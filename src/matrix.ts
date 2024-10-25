@@ -8,6 +8,7 @@ class Matrix {
   protected display = 0;
   protected opcode: number | null = null;
   protected store: Writable<Uint8Array[]>;
+  public debug = false;
 
   constructor() {
     this.store = writable(Array.from({ length: this.TOTAL_MODULES }, () => new Uint8Array(8)));
@@ -26,6 +27,9 @@ class Matrix {
           modules[this.display][this.opcode!-1] = value;
           return modules;
         });
+        if (this.debug) {
+          console.log('d=%s o=%s v=%s', this.display, this.opcode, value);
+        }
       } else {
         console.log('unhandled opcode: %s %s', this.opcode, value);
       }

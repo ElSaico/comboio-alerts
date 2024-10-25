@@ -44,7 +44,13 @@
   <LedMatrix color="#ff9900" ledWidth={4} ledHeight={5} modules={matrix.zone(1)} />
   <LedMatrix color="#ff9900" ledWidth={4} ledHeight={5} modules={matrix.zone(2)} />
   <LedMatrix color="#ff9900" ledWidth={4} ledHeight={5} modules={matrix.zone(3)} />
+  <div>
+    <label>
+      <input type="checkbox" name="debug" checked={matrix.debug} on:change={() => { matrix.debug = !matrix.debug; }} />
+      Debug
+    </label>
   {#each messages as message}
     <button type="button" on:click={() => { runner.serialWrite(message[1]); }}>{message[0]}</button>
   {/each}
+  </div>
 </main>
