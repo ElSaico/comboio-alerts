@@ -6,35 +6,31 @@
 #include "fonts.hpp"
 
 #define BAUD_RATE     9600
-#define HARDWARE_TYPE MD_MAX72XX::PAROLA_HW
 #define CS_PIN        10
+
+#define NUM_ZONES     4
 #define NUM_MODULES   54
 
 #define MAX_LABEL     36 // up to 25 for username + 4 for " ()\0"; this leaves a minimum of 7 for amount
 #define MAX_MESSAGE   512
-
-#define NUM_ZONES     4
-#define ZONE_FOLLOW   1
-#define ZONE_SUB      2
-#define ZONE_CHEER    3
 
 #define TARGET_ALERTS 'A'
 #define TARGET_LABEL  'L'
 
 const uint8_t ZONES[] PROGMEM = { 0, 24, 34, 44, 54 };
 
-enum Stage { TARGET, EVENT_TYPE, NUMBER, USERNAME, MESSAGE };
+enum InputStage { STAGE_TARGET, STAGE_EVENT, STAGE_NUMBER, STAGE_USER, STAGE_MESSAGE };
+enum MatrixZone { ZONE_ALERTS, ZONE_FOLLOW, ZONE_SUB, ZONE_CHEER };
 enum EventType : char {
-  FOLLOWER = 'F',
-  SUB_NEW = 'S',
-  SUB_RENEW = 's',
-  SUB_GIFT = 'G',
-  CHEER = 'C',
-  RAID = 'R',
+  EVENT_FOLLOW = 'F',
+  EVENT_SUB_NEW = 'S',
+  EVENT_SUB_RENEW = 's',
+  EVENT_SUB_GIFT = 'G',
+  EVENT_CHEER = 'C',
+  EVENT_RAID = 'R',
 };
 
-auto P = MD_Parola(HARDWARE_TYPE, CS_PIN, NUM_MODULES);
-uint8_t flushZones = 0;
+auto P = MD_Parola(MD_MAX72XX::PAROLA_HW, CS_PIN, NUM_MODULES);
 char labels[NUM_ZONES-1][MAX_LABEL];
 
 void setup() {
@@ -43,24 +39,21 @@ void setup() {
   for (uint8_t i = 0; i < NUM_ZONES; i++) {
     P.setZone(i, ZONES[i], ZONES[i+1]-1);
   }
-  for (uint8_t i = 1; i < NUM_ZONES; i++) {
-    P.displayZoneText(i, labels[i-1], PA_LEFT, 60, 0, PA_SCROLL_LEFT, PA_SCROLL_LEFT);
-  }
 }
 
 void onAlertBar(EventType eventType, uint32_t num, char* user, char* message = nullptr) {
 }
 
 void onLabel(EventType eventType, uint32_t num, char* user) {
-  uint8_t zone;
+  MatrixZone zone;
   switch (eventType) {
-    case FOLLOWER:
+    case EVENT_FOLLOW:
       zone = ZONE_FOLLOW;
       break;
-    case SUB_NEW: case SUB_RENEW:
+    case EVENT_SUB_NEW: case EVENT_SUB_RENEW:
       zone = ZONE_SUB;
       break;
-    case CHEER:
+    case EVENT_CHEER:
       zone = ZONE_CHEER;
       break;
     default:
@@ -68,11 +61,12 @@ void onLabel(EventType eventType, uint32_t num, char* user) {
       return;
   }
   strncpy_P(labels[zone-1], user, MAX_LABEL);
-  flushZones |= 1 << zone;
+  P.displayZoneText(zone, labels[zone-1], PA_LEFT, 100, 1000, PA_SCROLL_LEFT);
+  P.displayReset(zone);
 }
 
 void readSerial() {
-  static Stage stage = TARGET;
+  static InputStage stage = STAGE_TARGET;
   static char target;
   static EventType eventType;
   static uint32_t num; // talk about future-proofing; are we ever getting a raid > 65535?
@@ -83,32 +77,32 @@ void readSerial() {
 
   char rc = Serial.read();
   switch (stage) {
-    case TARGET:
+    case STAGE_TARGET:
       if (rc == TARGET_ALERTS || rc == TARGET_LABEL) {
         target = rc;
-        stage = EVENT_TYPE;
+        stage = STAGE_EVENT;
         Serial << "t=" << target;
       } else {
         Serial << "invalid t=" << rc << endl;
       }
       break;
-    case EVENT_TYPE:
+    case STAGE_EVENT:
       eventType = (EventType)rc;
-      stage = NUMBER;
+      stage = STAGE_NUMBER;
       num = 0;
       Serial << " e=" << rc;
       break;
-    case NUMBER:
+    case STAGE_NUMBER:
       if (rc != '\n') {
         num *= 10;
         num += rc - '0';
       } else {
-        stage = USERNAME;
+        stage = STAGE_USER;
         userSize = 0;
         Serial << " n=" << num << endl;
       }
       break;
-    case USERNAME:
+    case STAGE_USER:
       if (rc != '\n') {
         user[userSize++] = rc;
       } else {
@@ -116,30 +110,30 @@ void readSerial() {
         Serial << "u=" << user << endl;
         if (target == TARGET_ALERTS) {
           switch (eventType) {
-            case FOLLOWER: case SUB_GIFT:
-              stage = TARGET;
+            case EVENT_FOLLOW: case EVENT_SUB_GIFT:
+              stage = STAGE_TARGET;
               onAlertBar(eventType, num, user);
               break;
-            case SUB_NEW: case SUB_RENEW: case CHEER: case RAID:
-              stage = MESSAGE;
+            case EVENT_SUB_NEW: case EVENT_SUB_RENEW: case EVENT_CHEER: case EVENT_RAID:
+              stage = STAGE_MESSAGE;
               messageSize = 0;
               break;
             default:
-              stage = TARGET;
+              stage = STAGE_TARGET;
               Serial << "invalid e=" << eventType << endl;
           }
         } else {
-          stage = TARGET;
+          stage = STAGE_TARGET;
           onLabel(eventType, num, user);
         }
       }
       break;
-    case MESSAGE:
+    case STAGE_MESSAGE:
       if (rc != '\n') {
         message[messageSize++] = rc;
       } else {
         message[messageSize] = '\0';
-        stage = TARGET;
+        stage = STAGE_TARGET;
         onAlertBar(eventType, num, user, message);
         Serial << "m=" << message << endl;
       }
@@ -154,15 +148,10 @@ void loop() {
     readSerial();
   }
 
-  if (P.displayAnimate()) {
-    for (uint8_t i = 1; i < NUM_ZONES; i++) {
-      if (P.getZoneStatus(i)) {
-        P.displayReset(i);
-      }
-      if (flushZones & (1 << i)) {
-        flushZones &= ~(1 << i);
-        Serial << "reset label " << i << endl;
-      }
+  P.displayAnimate();
+  for (uint8_t i = 0; i < NUM_ZONES; i++) {
+    if (P.getZoneStatus(i)) {
+      P.displayReset(i);
     }
   }
 }
