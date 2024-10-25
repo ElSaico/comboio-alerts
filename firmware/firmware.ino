@@ -1,6 +1,5 @@
 #include <MD_Parola.h>
 #include <MD_MAX72xx.h>
-#include <Streaming.h>
 #include <SPI.h>
 
 #include "fonts.hpp"
@@ -14,10 +13,19 @@
 #define MAX_LABEL     36 // up to 25 for username + 4 for " ()\0"; this leaves a minimum of 7 for amount
 #define MAX_MESSAGE   512
 
+#define SIZE_ALERTS   24
+#define SIZE_LABEL    10
+
 #define TARGET_ALERTS 'A'
 #define TARGET_LABEL  'L'
 
-const uint8_t ZONES[] = { 0, 24, 34, 44, 54 };
+const uint8_t ZONES[] PROGMEM = {
+  0,
+  SIZE_ALERTS,
+  SIZE_ALERTS + SIZE_LABEL,
+  SIZE_ALERTS + SIZE_LABEL*2,
+  SIZE_ALERTS + SIZE_LABEL*3
+};
 
 enum InputStage { STAGE_TARGET, STAGE_EVENT, STAGE_NUMBER, STAGE_USER, STAGE_MESSAGE };
 enum MatrixZone { ZONE_ALERTS, ZONE_FOLLOW, ZONE_SUB, ZONE_CHEER };
@@ -32,12 +40,16 @@ enum EventType : char {
 
 auto P = MD_Parola(MD_MAX72XX::PAROLA_HW, CS_PIN, NUM_MODULES);
 char labels[NUM_ZONES-1][MAX_LABEL];
+char output[MAX_LABEL];
 
 void setup() {
   Serial.begin(BAUD_RATE);
   P.begin(NUM_ZONES);
   for (uint8_t i = 0; i < NUM_ZONES; i++) {
-    P.setZone(i, ZONES[i], ZONES[i+1]-1);
+    P.setZone(i, pgm_read_byte_near(ZONES+i), pgm_read_byte_near(ZONES+i+1)-1);
+  }
+  for (uint8_t i = 1; i < NUM_ZONES; i++) {
+    P.displayZoneText(i, labels[i-1], PA_LEFT, 100, 1000, PA_SCROLL_LEFT, PA_SCROLL_LEFT);
   }
 }
 
@@ -49,19 +61,21 @@ void onLabel(EventType eventType, uint32_t num, char* user) {
   switch (eventType) {
     case EVENT_FOLLOW:
       zone = ZONE_FOLLOW;
+      strncpy(labels[zone-1], user, MAX_LABEL);
       break;
     case EVENT_SUB_NEW: case EVENT_SUB_RENEW:
       zone = ZONE_SUB;
+      snprintf_P(labels[zone-1], MAX_LABEL, PSTR("%s (%d)"), user, num);
       break;
     case EVENT_CHEER:
       zone = ZONE_CHEER;
+      snprintf_P(labels[zone-1], MAX_LABEL, PSTR("%s (%d)"), user, num);
       break;
     default:
-      Serial << "invalid e=" << eventType << " for t=L" << endl;
+      sprintf_P(output, PSTR("invalid e=%c for t=L\n"), eventType);
+      Serial.write(output);
       return;
   }
-  strncpy(labels[zone-1], user, MAX_LABEL);
-  P.displayZoneText(zone, labels[zone-1], PA_LEFT, 100, 1000, PA_SCROLL_LEFT);
   P.displayReset(zone);
 }
 
@@ -81,16 +95,18 @@ void readSerial() {
       if (rc == TARGET_ALERTS || rc == TARGET_LABEL) {
         target = rc;
         stage = STAGE_EVENT;
-        Serial << "t=" << target;
+        sprintf_P(output, PSTR("t=%c"), rc);
       } else {
-        Serial << "invalid t=" << rc << endl;
+        sprintf_P(output, PSTR("invalid t=%c\n"), rc);
       }
+      Serial.write(output);
       break;
     case STAGE_EVENT:
       eventType = (EventType)rc;
       stage = STAGE_NUMBER;
       num = 0;
-      Serial << " e=" << rc;
+      sprintf_P(output, PSTR(" e=%c"), rc);
+      Serial.write(output);
       break;
     case STAGE_NUMBER:
       if (rc != '\n') {
@@ -99,7 +115,8 @@ void readSerial() {
       } else {
         stage = STAGE_USER;
         userSize = 0;
-        Serial << " n=" << num << endl;
+        sprintf_P(output, PSTR(" n=%d\n"), num);
+        Serial.write(output);
       }
       break;
     case STAGE_USER:
@@ -107,7 +124,8 @@ void readSerial() {
         user[userSize++] = rc;
       } else {
         user[userSize] = '\0';
-        Serial << "u=" << user << endl;
+        sprintf_P(output, PSTR("u=%s\n"), user);
+        Serial.write(output);
         if (target == TARGET_ALERTS) {
           switch (eventType) {
             case EVENT_FOLLOW: case EVENT_SUB_GIFT:
@@ -120,7 +138,8 @@ void readSerial() {
               break;
             default:
               stage = STAGE_TARGET;
-              Serial << "invalid e=" << eventType << endl;
+              sprintf_P(output, PSTR("invalid e=%s\n"), eventType);
+              Serial.write(output);
           }
         } else {
           stage = STAGE_TARGET;
@@ -135,11 +154,11 @@ void readSerial() {
         message[messageSize] = '\0';
         stage = STAGE_TARGET;
         onAlertBar(eventType, num, user, message);
-        Serial << "m=" << message << endl;
       }
       break;
     default:
-      Serial << "invalid stage " << stage << " (WTF?)" << endl;
+      sprintf_P(output, PSTR("invalid stage %d (WTF?)\n"), stage);
+      Serial.write(output);
   }
 }
 
@@ -148,10 +167,11 @@ void loop() {
     readSerial();
   }
 
-  P.displayAnimate();
-  for (uint8_t i = 0; i < NUM_ZONES; i++) {
-    if (P.getZoneStatus(i)) {
-      P.displayReset(i);
+  if (P.displayAnimate()) {
+    for (uint8_t i = 0; i < NUM_ZONES; i++) {
+      if (P.getZoneStatus(i)) {
+        P.displayReset(i);
+      }
     }
   }
 }
