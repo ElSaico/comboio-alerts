@@ -17,7 +17,7 @@
 #define TARGET_ALERTS 'A'
 #define TARGET_LABEL  'L'
 
-const uint8_t ZONES[] PROGMEM = { 0, 24, 34, 44, 54 };
+const uint8_t ZONES[] = { 0, 24, 34, 44, 54 };
 
 enum InputStage { STAGE_TARGET, STAGE_EVENT, STAGE_NUMBER, STAGE_USER, STAGE_MESSAGE };
 enum MatrixZone { ZONE_ALERTS, ZONE_FOLLOW, ZONE_SUB, ZONE_CHEER };
@@ -60,7 +60,7 @@ void onLabel(EventType eventType, uint32_t num, char* user) {
       Serial << "invalid e=" << eventType << " for t=L" << endl;
       return;
   }
-  strncpy_P(labels[zone-1], user, MAX_LABEL);
+  strncpy(labels[zone-1], user, MAX_LABEL);
   P.displayZoneText(zone, labels[zone-1], PA_LEFT, 100, 1000, PA_SCROLL_LEFT);
   P.displayReset(zone);
 }
