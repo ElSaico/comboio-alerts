@@ -57,26 +57,23 @@ void onAlertBar(EventType eventType, uint32_t num, char* user, char* message = n
 }
 
 void onLabel(EventType eventType, uint32_t num, char* user) {
-  MatrixZone zone;
   switch (eventType) {
     case EVENT_FOLLOW:
-      zone = ZONE_FOLLOW;
-      strncpy(labels[zone-1], user, MAX_LABEL);
+      strncpy(labels[ZONE_FOLLOW-1], user, MAX_LABEL);
+      P.displayReset(ZONE_FOLLOW);
       break;
     case EVENT_SUB_NEW: case EVENT_SUB_RENEW:
-      zone = ZONE_SUB;
-      snprintf_P(labels[zone-1], MAX_LABEL, PSTR("%s (%d)"), user, num);
+      snprintf_P(labels[ZONE_SUB-1], MAX_LABEL, PSTR("%s (%d)"), user, num);
+      P.displayReset(ZONE_SUB);
       break;
     case EVENT_CHEER:
-      zone = ZONE_CHEER;
-      snprintf_P(labels[zone-1], MAX_LABEL, PSTR("%s (%d)"), user, num);
+      snprintf_P(labels[ZONE_CHEER-1], MAX_LABEL, PSTR("%s (%d)"), user, num);
+      P.displayReset(ZONE_CHEER);
       break;
     default:
       sprintf_P(output, PSTR("invalid e=%c for t=L\n"), eventType);
       Serial.write(output);
-      return;
   }
-  P.displayReset(zone);
 }
 
 void readSerial() {
