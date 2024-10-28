@@ -1,4 +1,4 @@
-import { derived, type Invalidator, type Subscriber, type Writable, writable } from 'svelte/store';
+import { derived, type Subscriber, type Writable, writable } from 'svelte/store';
 
 class Matrix {
   protected TOTAL_MODULES = 54;
@@ -8,13 +8,12 @@ class Matrix {
   protected display = 0;
   protected opcode: number | null = null;
   protected store: Writable<Uint8Array[]>;
-  public debug = false;
 
   constructor() {
     this.store = writable(Array.from({ length: this.TOTAL_MODULES }, () => new Uint8Array(8)));
   }
 
-  public subscribe(run: Subscriber<Uint8Array[]>, invalidate?: Invalidator<Uint8Array[]>) {
+  public subscribe(run: Subscriber<Uint8Array[]>, invalidate?: () => void) {
     return this.store.subscribe(run, invalidate);
   }
 
@@ -22,16 +21,11 @@ class Matrix {
     if (this.opcode === null) {
       this.opcode = value;
     } else {
-      if (this.opcode <= 8) {
+      if (this.opcode <= 8) { // TODO verify what opcodes > 8 do
         this.store.update(modules => {
           modules[this.display][this.opcode!-1] = value;
           return modules;
         });
-        if (this.debug) {
-          console.log('d=%s o=%s v=%s', this.display, this.opcode, value);
-        }
-      } else {
-        console.log('unhandled opcode: %s %s', this.opcode, value);
       }
       this.display = (this.display + 1) % this.TOTAL_MODULES;
       this.opcode = null;

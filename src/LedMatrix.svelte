@@ -3,10 +3,13 @@
 
   const OFF_COLOR = '#444444';
 
-  export let ledWidth: number;
-  export let ledHeight: number;
-  export let color: string;
-  export let modules: Readable<Uint8Array[]>;
+  interface Props {
+    ledWidth: number;
+    ledHeight: number;
+    color: string;
+    modules: Readable<Uint8Array[]>;
+  }
+  let { ledWidth, ledHeight, color, modules }: Props = $props();
 </script>
 
 {#each $modules as display}

@@ -1,7 +1,7 @@
 <script lang="ts">
   import AVRRunner from './execute';
-  import matrix from './matrix';
-  import LedMatrix from './lib/LedMatrix.svelte';
+  import matrix from './matrix.svelte';
+  import LedMatrix from './LedMatrix.svelte';
   import firmwareUrl from '../build/firmware.ino.with_bootloader.bin?url';
 
   const messages = [
@@ -45,12 +45,8 @@
   <LedMatrix color="#ff9900" ledWidth={4} ledHeight={5} modules={matrix.zone(2)} />
   <LedMatrix color="#ff9900" ledWidth={4} ledHeight={5} modules={matrix.zone(3)} />
   <div>
-    <label>
-      <input type="checkbox" name="debug" checked={matrix.debug} on:change={() => { matrix.debug = !matrix.debug; }} />
-      Debug
-    </label>
   {#each messages as message}
-    <button type="button" on:click={() => { runner.serialWrite(message[1]); }}>{message[0]}</button>
+    <button type="button" onclick={() => { runner.serialWrite(message[1]); }}>{message[0]}</button>
   {/each}
   </div>
 </main>
