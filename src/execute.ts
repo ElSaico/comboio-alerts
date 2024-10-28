@@ -1,14 +1,17 @@
 import {
   avrInstruction,
   CPU,
+  AVRTimer,
   AVRUSART,
   AVRSPI,
+  timer0Config,
   usart0Config,
   spiConfig,
 } from 'avr8js';
 
 export default class AVRRunner {
   readonly cpu: CPU;
+  readonly timer: AVRTimer;
   readonly usart: AVRUSART;
   readonly spi: AVRSPI;
   readonly frequency = 16e6; // 16 MHz
@@ -18,6 +21,7 @@ export default class AVRRunner {
 
   constructor(program: Uint16Array) {
     this.cpu = new CPU(program);
+    this.timer = new AVRTimer(this.cpu, timer0Config);
     this.usart = new AVRUSART(this.cpu, usart0Config, this.frequency);
     this.spi = new AVRSPI(this.cpu, spiConfig, this.frequency);
 

@@ -18,7 +18,6 @@
   ];
   let runner: AVRRunner;
   let serial: string = $state('');
-  let debugEl: HTMLPreElement = $state()!;
   let serialEl: HTMLPreElement = $state()!;
 
   fetch(firmwareUrl).then(async response => {
@@ -48,12 +47,11 @@
     }
   }
 
-  function autoScroll(node: HTMLPreElement, content: string) {
-    node.scroll({ top: node.scrollHeight, behavior: 'smooth' });
-  };
-
-  $effect(() => autoScroll(debugEl, matrix.debug));
-  $effect(() => autoScroll(serialEl, serial));
+  $effect(() => {
+    if (serial) {
+      serialEl.scroll({ top: serialEl.scrollHeight, behavior: 'smooth' });
+    }
+  });
 </script>
 
 <main>
@@ -67,22 +65,20 @@
   {/each}
   </div>
   <div class="outputs">
-    <pre bind:this={debugEl}>{matrix.debug}</pre>
     <pre bind:this={serialEl}>{serial}</pre>  
   </div>
 </main>
 
 <style>
   .outputs {
-    display: flex;
     width: 100%;
-    height: calc(100vh - 96px);
+    height: calc(100vh - 120px);
     column-gap: 16px;
   }
 
   .outputs pre {
-    flex-grow: 1;
     padding: 8px;
+    height: 100%;
     overflow-y: scroll;
     color: green;
     background-color: black;
