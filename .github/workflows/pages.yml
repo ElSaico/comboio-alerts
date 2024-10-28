@@ -22,7 +22,7 @@ jobs:
       url: ${{ steps.deploy_to_pages.outputs.github_pages_url }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Build firmware
         uses: arduino/compile-sketches@v1
         with:
@@ -31,6 +31,10 @@ jobs:
             - firmware
           libraries: |
             - name: MD_Parola
+          cli-compile-flags: |
+            - --export-binaries
+            - --output-dir
+            - build
       - name: Deploy to Pages
         uses: skywarth/vite-github-pages-deployer@v1.4.0
         id: deploy_to_pages
