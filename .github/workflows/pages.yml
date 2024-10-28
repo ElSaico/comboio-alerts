@@ -23,6 +23,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Build firmware
+        uses: arduino/compile-sketches@v1
+        with:
+          fqbn: "arduino:avr:uno"
+          sketch-paths: |
+            - build
+          libraries: |
+            - name: MD_Parola
       - name: Deploy to Pages
         uses: skywarth/vite-github-pages-deployer@v1.4.0
         id: deploy_to_pages
