@@ -32,8 +32,7 @@ jobs:
           libraries: |
             - name: MD_Parola
           cli-compile-flags: |
-            - --export-binaries
-            - --output-dir
+            - --build-path
             - build
       - name: Deploy to Pages
         uses: skywarth/vite-github-pages-deployer@v1.4.0
