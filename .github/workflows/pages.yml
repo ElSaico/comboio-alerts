@@ -28,7 +28,7 @@ jobs:
         with:
           fqbn: "arduino:avr:uno"
           sketch-paths: |
-            - build
+            - firmware
           libraries: |
             - name: MD_Parola
       - name: Deploy to Pages
