@@ -8,6 +8,7 @@ class Matrix {
   protected display = 0;
   protected opcode: number | null = null;
   protected store: Writable<Uint8Array[]>;
+  public debug = $state('');
 
   constructor() {
     this.store = writable(Array.from({ length: this.TOTAL_MODULES }, () => new Uint8Array(8)));
@@ -27,6 +28,7 @@ class Matrix {
           return modules;
         });
       }
+      this.debug += `\ndpy=${this.display} opc=${this.opcode} val=${value}`;
       this.display = (this.display + 1) % this.TOTAL_MODULES;
       this.opcode = null;
     }

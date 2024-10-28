@@ -17,6 +17,7 @@
     ['Label: Cheer', 'LC1000\nTestCheer\n'],
   ];
   let runner: AVRRunner;
+  let output: string = $state('');
 
   fetch(firmwareUrl).then(async response => {
     const firmware = await response.arrayBuffer();
@@ -28,7 +29,7 @@
     };
 
     runner.usart.onLineTransmit = line => {
-      console.log(line);
+      output += line + '\n';
     };
 
     runner.execute(() => {});
@@ -49,4 +50,6 @@
     <button type="button" onclick={() => { runner.serialWrite(message[1]); }}>{message[0]}</button>
   {/each}
   </div>
+  <pre>{matrix.debug}</pre>
+  <pre>{output}</pre>
 </main>
