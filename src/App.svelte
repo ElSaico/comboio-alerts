@@ -4,20 +4,22 @@
   import LedMatrix from './LedMatrix.svelte';
   import firmwareUrl from '../build/firmware.ino.with_bootloader.bin?url';
 
-  const messages = [
-    ['Alert: Follow', 'AF0\nTestFollow\n'],
-    ['Alert: Sub', 'AS0\nTestSub\nNew sub message\n'],
-    ['Alert: Resub', 'As12\nTestResub\nResub message\n'],
-    ['Alert: Gift', 'AG10\nTestGiftSub\n'],
-    ['Alert: Cheer', 'AC1000\nTestCheer\nCheer message\n'],
-    ['Alert: Raid', 'AR10000\nTestRaid\nRaid Test\n'],
-    ['Label: Follow', 'LF0\nTestFollow\n'],
-    ['Label: Sub', 'LS0\nTestSub\n'],
-    ['Label: Resub', 'Ls24\nTestResub\n'],
-    ['Label: Cheer', 'LC1000\nTestCheer\n'],
+  const messages: [string, string[]][] = [
+    ['Alert: Follow', ['AF0', 'TestFollow']],
+    ['Alert: Sub', ['AS0', 'TestSub', 'New sub message']],
+    ['Alert: Resub', ['As12', 'TestResub', 'Resub message']],
+    ['Alert: Gift', ['AG10', 'TestGiftSub']],
+    ['Alert: Cheer', ['AC1000', 'TestCheer', 'Cheer message']],
+    ['Alert: Raid', ['AR10000', 'TestRaid', 'Raid Test']],
+    ['Label: Follow', ['LF0', 'TestFollow']],
+    ['Label: Sub', ['LS0', 'TestSub']],
+    ['Label: Resub', ['Ls24', 'TestResub']],
+    ['Label: Cheer', ['LC1000', 'TestCheer']],
   ];
   let runner: AVRRunner;
-  let output: string = $state('');
+  let serial: string = $state('');
+  let debugEl: HTMLPreElement = $state()!;
+  let serialEl: HTMLPreElement = $state()!;
 
   fetch(firmwareUrl).then(async response => {
     const firmware = await response.arrayBuffer();
@@ -29,7 +31,7 @@
     };
 
     runner.usart.onLineTransmit = line => {
-      output += line + '\n';
+      serial += `${line}\n`;
     };
 
     runner.execute(() => {});
@@ -38,6 +40,20 @@
       runner.stop();
     };
   });
+
+  function sendCommands(commands: string[]) {
+    for (const command of commands) {
+      serial += `>> ${command}\n`;
+      runner.serialWrite(`${command}\n`);
+    }
+  }
+
+  function autoScroll(node: HTMLPreElement, content: string) {
+    node.scroll({ top: node.scrollHeight, behavior: 'smooth' });
+  };
+
+  $effect(() => autoScroll(debugEl, matrix.debug));
+  $effect(() => autoScroll(serialEl, serial));
 </script>
 
 <main>
@@ -46,10 +62,29 @@
   <LedMatrix color="#ff9900" ledWidth={4} ledHeight={5} modules={matrix.zone(2)} />
   <LedMatrix color="#ff9900" ledWidth={4} ledHeight={5} modules={matrix.zone(3)} />
   <div>
-  {#each messages as message}
-    <button type="button" onclick={() => { runner.serialWrite(message[1]); }}>{message[0]}</button>
+  {#each messages as [label, commands]}
+    <button type="button" onclick={() => sendCommands(commands)}>{label}</button>
   {/each}
   </div>
-  <pre>{matrix.debug}</pre>
-  <pre>{output}</pre>
+  <div class="outputs">
+    <pre bind:this={debugEl}>{matrix.debug}</pre>
+    <pre bind:this={serialEl}>{serial}</pre>  
+  </div>
 </main>
+
+<style>
+  .outputs {
+    display: flex;
+    width: 100%;
+    height: calc(100vh - 96px);
+    column-gap: 16px;
+  }
+
+  .outputs pre {
+    flex-grow: 1;
+    padding: 8px;
+    overflow-y: scroll;
+    color: green;
+    background-color: black;
+  }
+</style>
