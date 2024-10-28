@@ -23,19 +23,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+      - name: Install firmware dependencies
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install arduino:avr
+          arduino-cli lib install MD_Parola
       - name: Build firmware
-        uses: arduino/compile-sketches@v1
-        with:
-          fqbn: "arduino:avr:uno"
-          enable-warnings-report: true
-          verbose: true
-          sketch-paths: |
-            - firmware
-          libraries: |
-            - name: MD_Parola
-          cli-compile-flags: |
-            - --build-path
-            - build
+        run: arduino-cli compile -b arduino:avr:uno --build-path ./build ./firmware
       - name: Deploy to Pages
         uses: skywarth/vite-github-pages-deployer@v1.4.0
         id: deploy_to_pages
