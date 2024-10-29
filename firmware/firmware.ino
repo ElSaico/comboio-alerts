@@ -19,13 +19,11 @@
 #define TARGET_ALERTS 'A'
 #define TARGET_LABEL  'L'
 
-const uint8_t ZONES[] PROGMEM = {
-  0,
-  SIZE_ALERTS,
-  SIZE_ALERTS + SIZE_LABEL,
-  SIZE_ALERTS + SIZE_LABEL*2,
-  SIZE_ALERTS + SIZE_LABEL*3
-};
+#define ZONE_LABEL(z) labels[(z)-1]
+#define ZONE_END(z)   (SIZE_ALERTS + SIZE_LABEL*(z) - 1)
+#define ZONE_BEGIN(z) (ZONE_END(z) - ((z) ? SIZE_LABEL : SIZE_ALERTS) + 1)
+
+#define LABEL_SPEED   50
 
 enum InputStage { STAGE_TARGET, STAGE_EVENT, STAGE_NUMBER, STAGE_USER, STAGE_MESSAGE };
 enum MatrixZone { ZONE_ALERTS, ZONE_FOLLOW, ZONE_SUB, ZONE_CHEER };
@@ -47,12 +45,15 @@ char output[MAX_LABEL];
 void setup() {
   Serial.begin(BAUD_RATE);
   P.begin(NUM_ZONES);
-  for (uint8_t i = 0; i < NUM_ZONES; i++) {
-    P.setZone(i, pgm_read_byte_near(ZONES+i), pgm_read_byte_near(ZONES+i+1)-1);
+  for (uint8_t z = 0; z < NUM_ZONES; z++) {
+    P.setZone(z, ZONE_BEGIN(z), ZONE_END(z));
   }
-  for (uint8_t i = 1; i < NUM_ZONES; i++) {
-    P.setFont(i, fontMetro);
-    P.displayZoneText(i, labels[i-1], PA_LEFT, 100, 1000, PA_SCROLL_LEFT, PA_SCROLL_LEFT);
+  for (uint8_t z = 1; z < NUM_ZONES; z++) {
+    P.setFont(z, fontMetro);
+    P.setTextBuffer(z, ZONE_LABEL(z));
+    P.setPause(z, LABEL_SPEED);
+    P.setSpeed(z, LABEL_SPEED);
+    P.setTextAlignment(z, PA_CENTER);
   }
 }
 
@@ -61,20 +62,28 @@ void onAlertBar(EventType eventType, uint32_t num, char* user, char* message = n
   P.displayReset(ZONE_ALERTS);
 }
 
+void setLabelAnimation(MatrixZone z) {
+  if (P.getTextColumns(z, ZONE_LABEL(z)) > SIZE_LABEL*8) {
+    P.setTextEffect(z, PA_SCROLL_LEFT, PA_SCROLL_LEFT);
+  } else {
+    P.setTextEffect(z, PA_PRINT, PA_NO_EFFECT);
+  }
+  P.displayReset(z);
+}
+
 void onLabel(EventType eventType, uint32_t num, char* user) {
-  // TODO set animation if it does not fit entirely on the zone, otherwise disable
   switch (eventType) {
     case EVENT_FOLLOW:
-      strncpy(labels[ZONE_FOLLOW-1], user, MAX_LABEL);
-      P.displayReset(ZONE_FOLLOW);
+      strncpy(ZONE_LABEL(ZONE_FOLLOW), user, MAX_LABEL);
+      setLabelAnimation(ZONE_FOLLOW);
       break;
     case EVENT_SUB_NEW: case EVENT_SUB_RENEW:
-      snprintf_P(labels[ZONE_SUB-1], MAX_LABEL, PSTR("%s (%d)"), user, num);
-      P.displayReset(ZONE_SUB);
+      snprintf_P(ZONE_LABEL(ZONE_SUB), MAX_LABEL, PSTR("%s (%d)"), user, num);
+      setLabelAnimation(ZONE_SUB);
       break;
     case EVENT_CHEER:
-      snprintf_P(labels[ZONE_CHEER-1], MAX_LABEL, PSTR("%s (%d)"), user, num);
-      P.displayReset(ZONE_CHEER);
+      snprintf_P(ZONE_LABEL(ZONE_CHEER), MAX_LABEL, PSTR("%s (%d)"), user, num);
+      setLabelAnimation(ZONE_CHEER);
       break;
     default:
       sprintf_P(output, PSTR("invalid e=%c for t=L\n"), eventType);
