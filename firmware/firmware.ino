@@ -27,7 +27,8 @@
 
 #define LABEL_SPEED   50
 
-enum InputStage { STAGE_TARGET, STAGE_EVENT, STAGE_NUMBER, STAGE_USER, STAGE_MESSAGE };
+enum InputStage { INPUT_TARGET, INPUT_EVENT, INPUT_NUMBER, INPUT_USER, INPUT_MESSAGE };
+enum AlertStage { ALERT_MAIN, ALERT_USER, ALERT_MESSAGE };
 enum MatrixZone { ZONE_ALERTS, ZONE_FOLLOW, ZONE_SUB, ZONE_CHEER };
 enum EventType : char {
   EVENT_FOLLOW = 'F',
@@ -99,7 +100,7 @@ void onLabel(EventType eventType, uint32_t num) {
 }
 
 void readSerial() {
-  static InputStage stage = STAGE_TARGET;
+  static InputStage stage = INPUT_TARGET;
   static char target;
   static EventType eventType;
   static uint32_t num; // way too optimistic to support a raid of over 65535, but it's only 2 extra bytes
@@ -108,10 +109,10 @@ void readSerial() {
 
   char rc = Serial.read();
   switch (stage) {
-    case STAGE_TARGET:
+    case INPUT_TARGET:
       if (rc == TARGET_ALERTS || rc == TARGET_LABEL) {
         target = rc;
-        stage = STAGE_EVENT;
+        stage = INPUT_EVENT;
 #if DEBUG
         sprintf_P(debugBuffer, PSTR("t=%c"), rc);
       } else {
@@ -122,21 +123,21 @@ void readSerial() {
       Serial.write(debugBuffer);
 #endif
       break;
-    case STAGE_EVENT:
+    case INPUT_EVENT:
       eventType = (EventType)rc;
-      stage = STAGE_NUMBER;
+      stage = INPUT_NUMBER;
       num = 0;
 #if DEBUG
       sprintf_P(debugBuffer, PSTR(" e=%c"), rc);
       Serial.write(debugBuffer);
 #endif
       break;
-    case STAGE_NUMBER:
+    case INPUT_NUMBER:
       if (rc != '\n') {
         num *= 10;
         num += rc - '0';
       } else {
-        stage = STAGE_USER;
+        stage = INPUT_USER;
         userSize = 0;
 #if DEBUG
         sprintf_P(debugBuffer, PSTR(" n=%d\n"), num);
@@ -144,7 +145,7 @@ void readSerial() {
 #endif
       }
       break;
-    case STAGE_USER:
+    case INPUT_USER:
       if (rc != '\n') {
         user[userSize++] = rc;
       } else {
@@ -156,32 +157,32 @@ void readSerial() {
         if (target == TARGET_ALERTS) {
           switch (eventType) {
             case EVENT_FOLLOW: case EVENT_SUB_GIFT:
-              stage = STAGE_TARGET;
+              stage = INPUT_TARGET;
               onAlertBar(eventType, num, false);
               break;
             case EVENT_SUB_NEW: case EVENT_SUB_RENEW: case EVENT_CHEER: case EVENT_RAID:
-              stage = STAGE_MESSAGE;
+              stage = INPUT_MESSAGE;
               messageSize = 0;
               break;
             default:
-              stage = STAGE_TARGET;
+              stage = INPUT_TARGET;
 #if DEBUG
               sprintf_P(debugBuffer, PSTR("invalid e=%s\n"), eventType);
               Serial.write(debugBuffer);
 #endif
           }
         } else {
-          stage = STAGE_TARGET;
+          stage = INPUT_TARGET;
           onLabel(eventType, num);
         }
       }
       break;
-    case STAGE_MESSAGE:
+    case INPUT_MESSAGE:
       if (rc != '\n') {
         message[messageSize++] = rc;
       } else {
         message[messageSize] = '\0';
-        stage = STAGE_TARGET;
+        stage = INPUT_TARGET;
         onAlertBar(eventType, num, true);
       }
       break;
