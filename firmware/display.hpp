@@ -27,6 +27,16 @@ enum EventType : char {
   EVENT_SHOUTOUT = 'O',
 };
 
+const char ALERTS_FOLLOW[] PROGMEM = "Novo passageiro no Comboio";
+// TODO pluralize
+const char ALERTS_RAID[] PROGMEM = "Embarque de uma raid com %d pessoas";
+const char ALERTS_SUB_GIFT[] PROGMEM = "%d passes doados para o Comboio";
+const char ALERTS_SUB_NEW[] PROGMEM = "Nova aquisição de passe";
+const char ALERTS_SUB_RENEW[] PROGMEM = "Renovação de passe, totalizando %d meses";
+// TODO check how to handle decimal values
+const char ALERTS_DONATE[] PROGMEM = "Pix de %s enviado para o Comboio";
+const char ALERTS_SHOUTOUT[] PROGMEM = "O Comboio do Saico recomenda este canal";
+
 class LabelDisplay {
 public:
   LabelDisplay(MD_Parola* P, MatrixZone zone);
