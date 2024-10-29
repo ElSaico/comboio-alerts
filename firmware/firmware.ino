@@ -40,6 +40,7 @@ enum EventType : char {
 
 auto P = MD_Parola(MD_MAX72XX::PAROLA_HW, CS_PIN, NUM_MODULES);
 char labels[NUM_ZONES-1][MAX_LABEL];
+char alert[MAX_MESSAGE];
 char user[MAX_LABEL];
 char message[MAX_MESSAGE];
 #if DEBUG
@@ -61,7 +62,7 @@ void setup() {
   }
 }
 
-void onAlertBar(EventType eventType, uint32_t num, char* user, char* message = nullptr) {
+void onAlertBar(EventType eventType, uint32_t num, bool withMessage) {
   // TODO set state and initial message
   P.displayReset(ZONE_ALERTS);
 }
@@ -75,7 +76,7 @@ void setLabelAnimation(MatrixZone z) {
   P.displayReset(z);
 }
 
-void onLabel(EventType eventType, uint32_t num, char* user) {
+void onLabel(EventType eventType, uint32_t num) {
   switch (eventType) {
     case EVENT_FOLLOW:
       strncpy(ZONE_LABEL(ZONE_FOLLOW), user, MAX_LABEL);
@@ -101,7 +102,7 @@ void readSerial() {
   static InputStage stage = STAGE_TARGET;
   static char target;
   static EventType eventType;
-  static uint32_t num; // talk about future-proofing; are we ever getting a raid > 65535?
+  static uint32_t num; // way too optimistic to support a raid of over 65535, but it's only 2 extra bytes
   static uint8_t userSize;
   static uint16_t messageSize;
 
@@ -156,7 +157,7 @@ void readSerial() {
           switch (eventType) {
             case EVENT_FOLLOW: case EVENT_SUB_GIFT:
               stage = STAGE_TARGET;
-              onAlertBar(eventType, num, user);
+              onAlertBar(eventType, num, false);
               break;
             case EVENT_SUB_NEW: case EVENT_SUB_RENEW: case EVENT_CHEER: case EVENT_RAID:
               stage = STAGE_MESSAGE;
@@ -171,7 +172,7 @@ void readSerial() {
           }
         } else {
           stage = STAGE_TARGET;
-          onLabel(eventType, num, user);
+          onLabel(eventType, num);
         }
       }
       break;
@@ -181,7 +182,7 @@ void readSerial() {
       } else {
         message[messageSize] = '\0';
         stage = STAGE_TARGET;
-        onAlertBar(eventType, num, user, message);
+        onAlertBar(eventType, num, true);
       }
       break;
     default: ;
