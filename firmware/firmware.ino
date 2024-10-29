@@ -4,6 +4,8 @@
 
 #include "fonts.hpp"
 
+#define DEBUG         0
+
 #define BAUD_RATE     9600
 #define CS_PIN        10
 
@@ -40,7 +42,9 @@ auto P = MD_Parola(MD_MAX72XX::PAROLA_HW, CS_PIN, NUM_MODULES);
 char labels[NUM_ZONES-1][MAX_LABEL];
 char user[MAX_LABEL];
 char message[MAX_MESSAGE];
-char output[MAX_LABEL];
+#if DEBUG
+char debugBuffer[MAX_LABEL];
+#endif
 
 void setup() {
   Serial.begin(BAUD_RATE);
@@ -85,9 +89,11 @@ void onLabel(EventType eventType, uint32_t num, char* user) {
       snprintf_P(ZONE_LABEL(ZONE_CHEER), MAX_LABEL, PSTR("%s (%d)"), user, num);
       setLabelAnimation(ZONE_CHEER);
       break;
-    default:
-      sprintf_P(output, PSTR("invalid e=%c for t=L\n"), eventType);
-      Serial.write(output);
+    default: ;
+#if DEBUG
+      sprintf_P(debugBuffer, PSTR("invalid e=%c for t=L\n"), eventType);
+      Serial.write(debugBuffer);
+#endif
   }
 }
 
@@ -105,18 +111,24 @@ void readSerial() {
       if (rc == TARGET_ALERTS || rc == TARGET_LABEL) {
         target = rc;
         stage = STAGE_EVENT;
-        sprintf_P(output, PSTR("t=%c"), rc);
+#if DEBUG
+        sprintf_P(debugBuffer, PSTR("t=%c"), rc);
       } else {
-        sprintf_P(output, PSTR("invalid t=%c\n"), rc);
+        sprintf_P(debugBuffer, PSTR("invalid t=%c\n"), rc);
+#endif
       }
-      Serial.write(output);
+#if DEBUG
+      Serial.write(debugBuffer);
+#endif
       break;
     case STAGE_EVENT:
       eventType = (EventType)rc;
       stage = STAGE_NUMBER;
       num = 0;
-      sprintf_P(output, PSTR(" e=%c"), rc);
-      Serial.write(output);
+#if DEBUG
+      sprintf_P(debugBuffer, PSTR(" e=%c"), rc);
+      Serial.write(debugBuffer);
+#endif
       break;
     case STAGE_NUMBER:
       if (rc != '\n') {
@@ -125,8 +137,10 @@ void readSerial() {
       } else {
         stage = STAGE_USER;
         userSize = 0;
-        sprintf_P(output, PSTR(" n=%d\n"), num);
-        Serial.write(output);
+#if DEBUG
+        sprintf_P(debugBuffer, PSTR(" n=%d\n"), num);
+        Serial.write(debugBuffer);
+#endif
       }
       break;
     case STAGE_USER:
@@ -134,8 +148,10 @@ void readSerial() {
         user[userSize++] = rc;
       } else {
         user[userSize] = '\0';
-        sprintf_P(output, PSTR("u=%s\n"), user);
-        Serial.write(output);
+#if DEBUG
+        sprintf_P(debugBuffer, PSTR("u=%s\n"), user);
+        Serial.write(debugBuffer);
+#endif
         if (target == TARGET_ALERTS) {
           switch (eventType) {
             case EVENT_FOLLOW: case EVENT_SUB_GIFT:
@@ -148,8 +164,10 @@ void readSerial() {
               break;
             default:
               stage = STAGE_TARGET;
-              sprintf_P(output, PSTR("invalid e=%s\n"), eventType);
-              Serial.write(output);
+#if DEBUG
+              sprintf_P(debugBuffer, PSTR("invalid e=%s\n"), eventType);
+              Serial.write(debugBuffer);
+#endif
           }
         } else {
           stage = STAGE_TARGET;
@@ -166,9 +184,11 @@ void readSerial() {
         onAlertBar(eventType, num, user, message);
       }
       break;
-    default:
-      sprintf_P(output, PSTR("invalid stage %d (WTF?)\n"), stage);
-      Serial.write(output);
+    default: ;
+#if DEBUG
+      sprintf_P(debugBuffer, PSTR("invalid stage %d (WTF?)\n"), stage);
+      Serial.write(debugBuffer);
+#endif
   }
 }
 
