@@ -40,6 +40,8 @@ enum EventType : char {
 
 auto P = MD_Parola(MD_MAX72XX::PAROLA_HW, CS_PIN, NUM_MODULES);
 char labels[NUM_ZONES-1][MAX_LABEL];
+char user[MAX_LABEL];
+char message[MAX_MESSAGE];
 char output[MAX_LABEL];
 
 void setup() {
@@ -55,9 +57,12 @@ void setup() {
 }
 
 void onAlertBar(EventType eventType, uint32_t num, char* user, char* message = nullptr) {
+  // TODO set state and initial message
+  P.displayReset(ZONE_ALERTS);
 }
 
 void onLabel(EventType eventType, uint32_t num, char* user) {
+  // TODO set animation if it does not fit entirely on the zone, otherwise disable
   switch (eventType) {
     case EVENT_FOLLOW:
       strncpy(labels[ZONE_FOLLOW-1], user, MAX_LABEL);
@@ -82,9 +87,7 @@ void readSerial() {
   static char target;
   static EventType eventType;
   static uint32_t num; // talk about future-proofing; are we ever getting a raid > 65535?
-  static char user[MAX_LABEL];
   static uint8_t userSize;
-  static char message[MAX_MESSAGE];
   static uint16_t messageSize;
 
   char rc = Serial.read();
@@ -166,7 +169,11 @@ void loop() {
   }
 
   if (P.displayAnimate()) {
-    for (uint8_t i = 0; i < NUM_ZONES; i++) {
+    if (P.getZoneStatus(ZONE_ALERTS)) {
+      // TODO implement a FSM like readSerial (alert, user, message)
+      // send state updates to the bot (how?), for TTS and queue unlock
+    }
+    for (uint8_t i = 1; i < NUM_ZONES; i++) {
       if (P.getZoneStatus(i)) {
         P.displayReset(i);
       }
