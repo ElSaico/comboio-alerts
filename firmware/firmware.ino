@@ -49,6 +49,7 @@ void setup() {
     P.setZone(i, pgm_read_byte_near(ZONES+i), pgm_read_byte_near(ZONES+i+1)-1);
   }
   for (uint8_t i = 1; i < NUM_ZONES; i++) {
+    P.setFont(i, fontMetro);
     P.displayZoneText(i, labels[i-1], PA_LEFT, 100, 1000, PA_SCROLL_LEFT, PA_SCROLL_LEFT);
   }
 }
