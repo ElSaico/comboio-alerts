@@ -3,7 +3,7 @@
 
 #include <MD_MAX72xx.h>
 
-MD_MAX72XX::fontType_t fontIbm[] PROGMEM = {
+MD_MAX72XX::fontType_t FONT_IBM[] PROGMEM = {
 	1, 0, 	// 0
 	8, 126, 129, 149, 177, 177, 149, 129, 126, 	// 1
 	8, 126, 255, 235, 207, 207, 235, 255, 126, 	// 2
@@ -262,7 +262,7 @@ MD_MAX72XX::fontType_t fontIbm[] PROGMEM = {
 	0, 	// 255
 };
 
-MD_MAX72XX::fontType_t fontMetro[] PROGMEM = {
+MD_MAX72XX::fontType_t FONT_METRO[] PROGMEM = {
 	0, 	// 0
 	0, 	// 1
 	0, 	// 2

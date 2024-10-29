@@ -20,7 +20,9 @@ Spaces are merely for convenience of the reader and are not part of the data.
     * **G** - subscription gift
     * **C** - cheers
     * **R** - raid
-* ***n*** - number related to event (months subscribed, amount of gifts/bits, users raiding, etc.; ignored for new follow)
+    * **D** - donation
+    * **O** - shoutout
+* ***n*** - number related to event, if applicable (months subscribed, amount of gifts/bits, users raiding, etc.); otherwise set to 0
 * ***u*** - user who triggered the event
-* ***m*** - additional message (alert bar only, not applicable for new follow and sub gift)
+* ***m*** - additional message (alert bar and sub/cheers/donation only)
 * **\<LF\>** - newline character
