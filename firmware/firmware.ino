@@ -15,47 +15,23 @@
 #define TARGET_LABEL  'L'
 
 enum InputStage { INPUT_TARGET, INPUT_EVENT, INPUT_NUMBER, INPUT_USER, INPUT_MESSAGE };
-enum AlertStage { ALERT_MAIN, ALERT_USER, ALERT_MESSAGE };
-enum EventType : char {
-  EVENT_FOLLOW = 'F',
-  EVENT_SUB_NEW = 'S',
-  EVENT_SUB_RENEW = 's',
-  EVENT_SUB_GIFT = 'G',
-  EVENT_CHEER = 'C',
-  EVENT_RAID = 'R',
-  EVENT_DONATE = 'D',
-  EVENT_SHOUTOUT = 'O',
-};
 
 auto P = MD_Parola(MD_MAX72XX::PAROLA_HW, CS_PIN, NUM_MODULES);
+char userBuffer[MAX_LABEL];
+char messageBuffer[MAX_MESSAGE];
 
-auto labelFollow = LabelDisplay(&P, LabelDisplay::ZONE_FOLLOW);
-auto labelSub = LabelDisplay(&P, LabelDisplay::ZONE_SUB);
-auto labelCheer = LabelDisplay(&P, LabelDisplay::ZONE_CHEER);
-
-AlertStage alertStage;
-char alert[MAX_MESSAGE];
-char user[MAX_LABEL];
-char message[MAX_MESSAGE];
+auto alerts = AlertDisplay(&P, userBuffer, messageBuffer);
+auto labelFollow = LabelDisplay(&P, ZONE_FOLLOW);
+auto labelSub = LabelDisplay(&P, ZONE_SUB);
+auto labelCheer = LabelDisplay(&P, ZONE_CHEER);
 
 void setup() {
   Serial.begin(BAUD_RATE);
   P.begin(NUM_ZONES);
-  P.setZone(LabelDisplay::ZONE_ALERTS, ZONE_BEGIN(LabelDisplay::ZONE_ALERTS), ZONE_END(LabelDisplay::ZONE_ALERTS));
-  P.setSpeed(LabelDisplay::ZONE_ALERTS, LABEL_SPEED);
-  P.setTextAlignment(LabelDisplay::ZONE_ALERTS, PA_CENTER);
-  P.setPause(LabelDisplay::ZONE_ALERTS, 0);
+  alerts.begin();
   labelFollow.begin();
   labelSub.begin();
   labelCheer.begin();
-}
-
-void onAlertBar(EventType eventType, uint32_t num, bool withMessage) {
-  alertStage = ALERT_MAIN;
-  P.setFont(LabelDisplay::ZONE_ALERTS, FONT_METRO);
-  P.setTextBuffer(LabelDisplay::ZONE_ALERTS, alert);
-  P.setTextEffect(LabelDisplay::ZONE_ALERTS, PA_SCROLL_LEFT, PA_SCROLL_LEFT);
-  P.displayReset(LabelDisplay::ZONE_ALERTS);
 }
 
 void readSerial() {
@@ -90,14 +66,14 @@ void readSerial() {
       break;
     case INPUT_USER:
       if (rc != '\n') {
-        user[userSize++] = rc;
+        userBuffer[userSize++] = rc;
       } else {
-        user[userSize] = '\0';
+        userBuffer[userSize] = '\0';
         if (target == TARGET_ALERTS) {
           switch (eventType) {
             case EVENT_FOLLOW: case EVENT_SUB_GIFT:
               stage = INPUT_TARGET;
-              onAlertBar(eventType, num, false);
+              alerts.set(eventType, num);
               break;
             case EVENT_SUB_NEW: case EVENT_SUB_RENEW: case EVENT_CHEER: case EVENT_RAID:
               stage = INPUT_MESSAGE;
@@ -122,17 +98,17 @@ void readSerial() {
             default:
               return;
           }
-          label->set(user, num);
+          label->set(userBuffer, num);
         }
       }
       break;
     case INPUT_MESSAGE:
       if (rc != '\n') {
-        message[messageSize++] = rc;
+        messageBuffer[messageSize++] = rc;
       } else {
-        message[messageSize] = '\0';
+        messageBuffer[messageSize] = '\0';
         stage = INPUT_TARGET;
-        onAlertBar(eventType, num, true);
+        alerts.set(eventType, num);
       }
       break;
   }
@@ -144,14 +120,9 @@ void loop() {
   }
 
   if (P.displayAnimate()) {
-    if (P.getZoneStatus(LabelDisplay::ZONE_ALERTS)) {
-      // TODO implement a FSM like readSerial (alert, user, message)
-      // send state updates to the bot (how?), for TTS and queue unlock
-    }
-    for (uint8_t i = 1; i < NUM_ZONES; i++) {
-      if (P.getZoneStatus(i)) {
-        P.displayReset(i);
-      }
-    }
+    alerts.animate();
+    labelFollow.animate();
+    labelSub.animate();
+    labelCheer.animate();
   }
 }
