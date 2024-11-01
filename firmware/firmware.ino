@@ -9,6 +9,7 @@
 
 #define NUM_ZONES      4
 #define NUM_MODULES    54
+#define NUM_EVENTS     (sizeof(EVENTS) / sizeof(EVENTS[0])) // easier than keeping track of array size
 
 #define MAX_LABEL      36 // up to 25 for username + 4 for " ()\0"; this leaves a minimum of 7 for amount
 #define MAX_ALERT      64
@@ -26,7 +27,7 @@
 #define TARGET_LABEL  'L'
 
 enum inputStage_t { INPUT_TARGET, INPUT_EVENT, INPUT_NUMBER, INPUT_USER, INPUT_MESSAGE };
-enum zone_t { ZONE_ALERTS, ZONE_FOLLOW, ZONE_SUB, ZONE_CHEER, ZONE_INVALID };
+enum zone_t : uint8_t { ZONE_ALERTS, ZONE_FOLLOW, ZONE_SUB, ZONE_CHEER, ZONE_INVALID };
 enum alertStage_t { ALERT_IDLE, ALERT_EVENT, ALERT_USER, ALERT_MESSAGE };
 enum eventCode_t : char {
   EVENT_FOLLOW = 'F',
@@ -38,23 +39,24 @@ enum eventCode_t : char {
   EVENT_DONATE = 'D',
   EVENT_SHOUTOUT = 'O',
 };
-typedef struct {
+struct event_t {
   eventCode_t code;
   zone_t zone;
-  const char* alert;
-  const char* alertSingular;
-  const char* alertPlural;
-} event_t;
+  const char alert[48];
+  const char alertSingular[16];
+  const char alertPlural[16];
+  bool alertMessage;
+};
 
 const event_t EVENTS[] PROGMEM = {
-  { EVENT_FOLLOW, ZONE_FOLLOW, "Novo passageiro no Comboio", nullptr, nullptr },
-  { EVENT_SUB_NEW, ZONE_SUB, "Nova aquisição de passe", nullptr, nullptr },
-  { EVENT_SUB_RENEW, ZONE_SUB, "Renovação de passe, totalizando %d meses", nullptr, nullptr },
-  { EVENT_SUB_GIFT, ZONE_SUB, "%d %s para o Comboio", "passe doado", "passes doados" },
-  { EVENT_CHEER, ZONE_CHEER, "%d %s para o Comboio", "bit enviado", "bits enviados" },
-  { EVENT_RAID, ZONE_INVALID, "Embarque de uma raid com %d %s", "pessoa", "pessoas" },
-  { EVENT_DONATE, ZONE_INVALID, "Pix de %s enviado para o Comboio", nullptr, nullptr },
-  { EVENT_SHOUTOUT, ZONE_INVALID, "O Comboio do Saico recomenda este canal", nullptr, nullptr },
+  { EVENT_FOLLOW, ZONE_FOLLOW, "Novo passageiro no Comboio", "", "", false },
+  { EVENT_SUB_NEW, ZONE_SUB, "Nova aquisição de passe", "", "", false /* IIRC? */ },
+  { EVENT_SUB_RENEW, ZONE_SUB, "Renovação de passe, totalizando %d meses", "", "", true },
+  { EVENT_SUB_GIFT, ZONE_SUB, "%d %s para o Comboio", "passe doado", "passes doados", false },
+  { EVENT_CHEER, ZONE_CHEER, "%d %s para o Comboio", "bit enviado", "bits enviados", true },
+  { EVENT_RAID, ZONE_INVALID, "Embarque de uma raid com %d %s", "pessoa", "pessoas", true },
+  { EVENT_DONATE, ZONE_INVALID, "Pix de %s enviado para o Comboio", "", "", true },
+  { EVENT_SHOUTOUT, ZONE_INVALID, "O Comboio do Saico recomenda este canal", "", "", true },
 };
 
 auto P = MD_Parola(MD_MAX72XX::PAROLA_HW, CS_PIN, NUM_MODULES);
@@ -90,7 +92,7 @@ void setup() {
   beginLabel(ZONE_CHEER);
 }
 
-void setAlert(eventCode_t eventType, uint32_t num) {
+void setAlert(const event_t *event, uint32_t num) {
   alertStage = ALERT_EVENT;
   // TODO set alertBuffer and alertMessage according to eventType
   P.setFont(ZONE_ALERTS, FONT_METRO);
@@ -117,9 +119,8 @@ void setLabel(zone_t z, uint32_t num) {
 void readSerial() {
   static inputStage_t stage = INPUT_TARGET;
   static char target;
-  static eventCode_t eventType;
   static const event_t* event;
-  static uint32_t num; // way too optimistic to support a raid of over 65535, but it's only 2 extra bytes
+  static uint32_t num; // rather optimistic to support a raid of over 65535, but it's only 2 extra bytes
   static uint8_t userSize;
   static uint16_t messageSize;
 
@@ -132,7 +133,12 @@ void readSerial() {
       }
       break;
     case INPUT_EVENT:
-      eventType = (eventCode_t)rc;
+      for (const auto& e : EVENTS) {
+        if (rc == pgm_read_byte(&e.code)) {
+          event = &e;
+          break;
+        }
+      }
       stage = INPUT_NUMBER;
       num = 0;
       break;
@@ -150,32 +156,19 @@ void readSerial() {
         userBuffer[userSize++] = rc;
       } else {
         userBuffer[userSize] = '\0';
-        if (target == TARGET_ALERTS) {
-          switch (eventType) {
-            case EVENT_FOLLOW: case EVENT_SUB_GIFT:
-              stage = INPUT_TARGET;
-              setAlert(eventType, num);
-              break;
-            case EVENT_SUB_NEW: case EVENT_SUB_RENEW: case EVENT_CHEER: case EVENT_RAID:
-              stage = INPUT_MESSAGE;
-              messageSize = 0;
-              break;
-            default:
-              stage = INPUT_TARGET;
+        if (event == nullptr) {
+          stage = INPUT_TARGET;
+        } else if (target == TARGET_ALERTS) {
+          if (pgm_read_byte(&event->alertMessage)) {
+            stage = INPUT_MESSAGE;
+            messageSize = 0;
+          } else {
+            stage = INPUT_TARGET;
+            setAlert(event, num);
           }
         } else {
           stage = INPUT_TARGET;
-          switch (eventType) {
-            case EVENT_FOLLOW:
-              setLabel(ZONE_FOLLOW, num);
-              break;
-            case EVENT_SUB_NEW: case EVENT_SUB_RENEW: case EVENT_SUB_GIFT:
-              setLabel(ZONE_SUB, num);
-              break;
-            case EVENT_CHEER:
-              setLabel(ZONE_CHEER, num);
-              break;
-          }
+          setLabel(static_cast<zone_t> pgm_read_byte(&event->zone), num);
         }
       }
       break;
@@ -185,7 +178,7 @@ void readSerial() {
       } else {
         messageBuffer[messageSize] = '\0';
         stage = INPUT_TARGET;
-        setAlert(eventType, num);
+        setAlert(event, num);
       }
       break;
   }
