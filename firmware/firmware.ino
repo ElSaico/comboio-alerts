@@ -48,10 +48,11 @@ struct event_t {
   bool alertMessage;
 };
 
+/** WARNING: ensure all strings are on Parola's native encoding (ISO-8859-1) */
 const event_t EVENTS[] PROGMEM = {
   { EVENT_FOLLOW, ZONE_FOLLOW, "Novo passageiro no Comboio", "", "", false },
-  { EVENT_SUB_NEW, ZONE_SUB, "Nova aquisiÃ§Ã£o de passe", "", "", false /* IIRC? */ },
-  { EVENT_SUB_RENEW, ZONE_SUB, "RenovaÃ§Ã£o de passe, totalizando %d meses", "", "", true },
+  { EVENT_SUB_NEW, ZONE_SUB, "Nova aquisição de passe", "", "", false /* IIRC? */ },
+  { EVENT_SUB_RENEW, ZONE_SUB, "Renovação de passe, totalizando %d meses", "", "", true },
   { EVENT_SUB_GIFT, ZONE_SUB, "%d %s para o Comboio", "passe doado", "passes doados", false },
   { EVENT_CHEER, ZONE_CHEER, "%d %s para o Comboio", "bit enviado", "bits enviados", true },
   { EVENT_RAID, ZONE_INVALID, "Embarque de uma raid com %d %s", "pessoa", "pessoas", true },
@@ -66,6 +67,7 @@ char labelBuffer[NUM_ZONES-1][MAX_LABEL];
 char alertBuffer[MAX_ALERT];
 bool alertMessage;
 auto alertStage = ALERT_IDLE;
+const event_t* event;
 
 void beginAlert() {
   P.setZone(ZONE_ALERTS, 0, SIZE_ALERTS-1);
@@ -92,16 +94,22 @@ void setup() {
   beginLabel(ZONE_CHEER);
 }
 
-void setAlert(const event_t *event, uint32_t num) {
+void setAlert(uint32_t num) {
   alertStage = ALERT_EVENT;
-  // TODO set alertBuffer and alertMessage according to eventType
+  if (pgm_read_byte(&event->alertPlural[0])) {
+    auto numSuffix = (const char*) pgm_read_word(num == 1 ? &event->alertSingular : &event->alertPlural);
+    snprintf_P(alertBuffer, MAX_ALERT, event->alert, num, numSuffix);
+  } else {
+    snprintf_P(alertBuffer, MAX_ALERT, event->alert, num);
+  }
   P.setFont(ZONE_ALERTS, FONT_METRO);
   P.setTextBuffer(ZONE_ALERTS, alertBuffer);
   P.setTextEffect(ZONE_ALERTS, PA_SCROLL_LEFT, PA_SCROLL_LEFT);
   P.displayReset(ZONE_ALERTS);
 }
 
-void setLabel(zone_t z, uint32_t num) {
+void setLabel(uint32_t num) {
+  auto z = static_cast<zone_t> pgm_read_byte(&event->zone);
   if (num == 0) {
     strncpy(labelBuffer[z-1], userBuffer, MAX_LABEL);
   } else {
@@ -119,7 +127,6 @@ void setLabel(zone_t z, uint32_t num) {
 void readSerial() {
   static inputStage_t stage = INPUT_TARGET;
   static char target;
-  static const event_t* event;
   static uint32_t num; // rather optimistic to support a raid of over 65535, but it's only 2 extra bytes
   static uint8_t userSize;
   static uint16_t messageSize;
@@ -164,11 +171,11 @@ void readSerial() {
             messageSize = 0;
           } else {
             stage = INPUT_TARGET;
-            setAlert(event, num);
+            setAlert(num);
           }
         } else {
           stage = INPUT_TARGET;
-          setLabel(static_cast<zone_t> pgm_read_byte(&event->zone), num);
+          setLabel(num);
         }
       }
       break;
@@ -178,7 +185,7 @@ void readSerial() {
       } else {
         messageBuffer[messageSize] = '\0';
         stage = INPUT_TARGET;
-        setAlert(event, num);
+        setAlert(num);
       }
       break;
   }
