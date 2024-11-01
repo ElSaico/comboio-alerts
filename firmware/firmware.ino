@@ -26,9 +26,9 @@
 #define TARGET_ALERTS 'A'
 #define TARGET_LABEL  'L'
 
-enum inputStage_t { INPUT_TARGET, INPUT_EVENT, INPUT_NUMBER, INPUT_USER, INPUT_MESSAGE };
+enum inputStage_t : uint8_t { INPUT_TARGET, INPUT_EVENT, INPUT_NUMBER, INPUT_USER, INPUT_MESSAGE };
 enum zone_t : uint8_t { ZONE_ALERTS, ZONE_FOLLOW, ZONE_SUB, ZONE_CHEER, ZONE_INVALID };
-enum alertStage_t { ALERT_IDLE, ALERT_EVENT, ALERT_USER, ALERT_MESSAGE };
+enum alertStage_t : uint8_t { ALERT_IDLE, ALERT_EVENT, ALERT_USER, ALERT_MESSAGE };
 enum eventCode_t : char {
   EVENT_FOLLOW = 'F',
   EVENT_SUB_NEW = 'S',
@@ -193,7 +193,29 @@ void readSerial() {
 
 void animateAlert() {
   if (P.getZoneStatus(ZONE_ALERTS)) {
-    // TODO state management
+    switch (alertStage) {
+      case ALERT_EVENT:
+        alertStage = ALERT_USER;
+        // TODO slow down
+        P.setTextBuffer(ZONE_ALERTS, userBuffer);
+        P.setTextEffect(ZONE_ALERTS, PA_GROW_DOWN, PA_GROW_UP);
+        P.displayReset(ZONE_ALERTS);
+        break;
+      case ALERT_USER:
+        if (pgm_read_byte(&event->alertMessage)) {
+          alertStage = ALERT_MESSAGE;
+          P.setFont(ZONE_ALERTS, FONT_IBM);
+          P.setTextBuffer(ZONE_ALERTS, messageBuffer);
+          P.setTextEffect(ZONE_ALERTS, PA_SCROLL_LEFT, PA_SCROLL_LEFT);
+          P.displayReset(ZONE_ALERTS);
+        } else {
+          alertStage = ALERT_IDLE;
+        }
+        break;
+      case ALERT_MESSAGE:
+        alertStage = ALERT_IDLE;
+        break;
+    }
     // TODO handle timed rewards
     // TODO send callbacks to the bot (how?), for TTS and queue unlock
   }
