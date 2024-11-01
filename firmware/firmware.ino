@@ -25,10 +25,10 @@
 #define TARGET_ALERTS 'A'
 #define TARGET_LABEL  'L'
 
-enum InputStage { INPUT_TARGET, INPUT_EVENT, INPUT_NUMBER, INPUT_USER, INPUT_MESSAGE };
-enum MatrixZone { ZONE_ALERTS, ZONE_FOLLOW, ZONE_SUB, ZONE_CHEER };
-enum AlertStage { ALERT_IDLE, ALERT_EVENT, ALERT_USER, ALERT_MESSAGE };
-enum EventType : char {
+enum inputStage_t { INPUT_TARGET, INPUT_EVENT, INPUT_NUMBER, INPUT_USER, INPUT_MESSAGE };
+enum zone_t { ZONE_ALERTS, ZONE_FOLLOW, ZONE_SUB, ZONE_CHEER, ZONE_INVALID };
+enum alertStage_t { ALERT_IDLE, ALERT_EVENT, ALERT_USER, ALERT_MESSAGE };
+enum eventCode_t : char {
   EVENT_FOLLOW = 'F',
   EVENT_SUB_NEW = 'S',
   EVENT_SUB_RENEW = 's',
@@ -38,16 +38,24 @@ enum EventType : char {
   EVENT_DONATE = 'D',
   EVENT_SHOUTOUT = 'O',
 };
+typedef struct {
+  eventCode_t code;
+  zone_t zone;
+  const char* alert;
+  const char* alertSingular;
+  const char* alertPlural;
+} event_t;
 
-const char ALERTS_FOLLOW[] PROGMEM = "Novo passageiro no Comboio";
-// TODO pluralize
-const char ALERTS_RAID[] PROGMEM = "Embarque de uma raid com %d pessoas";
-const char ALERTS_SUB_GIFT[] PROGMEM = "%d passes doados para o Comboio";
-const char ALERTS_SUB_NEW[] PROGMEM = "Nova aquisição de passe";
-const char ALERTS_SUB_RENEW[] PROGMEM = "Renovação de passe, totalizando %d meses";
-// TODO check how to handle decimal values
-const char ALERTS_DONATE[] PROGMEM = "Pix de %s enviado para o Comboio";
-const char ALERTS_SHOUTOUT[] PROGMEM = "O Comboio do Saico recomenda este canal";
+const event_t EVENTS[] PROGMEM = {
+  { EVENT_FOLLOW, ZONE_FOLLOW, "Novo passageiro no Comboio", nullptr, nullptr },
+  { EVENT_SUB_NEW, ZONE_SUB, "Nova aquisição de passe", nullptr, nullptr },
+  { EVENT_SUB_RENEW, ZONE_SUB, "Renovação de passe, totalizando %d meses", nullptr, nullptr },
+  { EVENT_SUB_GIFT, ZONE_SUB, "%d %s para o Comboio", "passe doado", "passes doados" },
+  { EVENT_CHEER, ZONE_CHEER, "%d %s para o Comboio", "bit enviado", "bits enviados" },
+  { EVENT_RAID, ZONE_INVALID, "Embarque de uma raid com %d %s", "pessoa", "pessoas" },
+  { EVENT_DONATE, ZONE_INVALID, "Pix de %s enviado para o Comboio", nullptr, nullptr },
+  { EVENT_SHOUTOUT, ZONE_INVALID, "O Comboio do Saico recomenda este canal", nullptr, nullptr },
+};
 
 auto P = MD_Parola(MD_MAX72XX::PAROLA_HW, CS_PIN, NUM_MODULES);
 char userBuffer[MAX_LABEL];
@@ -64,7 +72,7 @@ void beginAlert() {
   P.setPause(ZONE_ALERTS, 0);
 }
 
-void beginLabel(MatrixZone z) {
+void beginLabel(zone_t z) {
   P.setZone(z, LABEL_START(z), LABEL_END(z));
   P.setSpeed(z, LABEL_SPEED);
   P.setTextAlignment(z, PA_CENTER);
@@ -82,7 +90,7 @@ void setup() {
   beginLabel(ZONE_CHEER);
 }
 
-void setAlert(EventType eventType, uint32_t num) {
+void setAlert(eventCode_t eventType, uint32_t num) {
   alertStage = ALERT_EVENT;
   // TODO set alertBuffer and alertMessage according to eventType
   P.setFont(ZONE_ALERTS, FONT_METRO);
@@ -91,7 +99,7 @@ void setAlert(EventType eventType, uint32_t num) {
   P.displayReset(ZONE_ALERTS);
 }
 
-void setLabel(MatrixZone z, uint32_t num) {
+void setLabel(zone_t z, uint32_t num) {
   if (num == 0) {
     strncpy(labelBuffer[z-1], userBuffer, MAX_LABEL);
   } else {
@@ -107,9 +115,10 @@ void setLabel(MatrixZone z, uint32_t num) {
 }
 
 void readSerial() {
-  static InputStage stage = INPUT_TARGET;
+  static inputStage_t stage = INPUT_TARGET;
   static char target;
-  static EventType eventType;
+  static eventCode_t eventType;
+  static const event_t* event;
   static uint32_t num; // way too optimistic to support a raid of over 65535, but it's only 2 extra bytes
   static uint8_t userSize;
   static uint16_t messageSize;
@@ -123,7 +132,7 @@ void readSerial() {
       }
       break;
     case INPUT_EVENT:
-      eventType = (EventType)rc;
+      eventType = (eventCode_t)rc;
       stage = INPUT_NUMBER;
       num = 0;
       break;
@@ -190,7 +199,7 @@ void animateAlert() {
   }
 }
 
-void animateLabel(MatrixZone z) {
+void animateLabel(zone_t z) {
   if (P.getZoneStatus(z)) {
     P.displayReset(z);
   }
