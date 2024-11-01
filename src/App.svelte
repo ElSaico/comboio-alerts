@@ -6,11 +6,11 @@
 
   const messages: [string, string[]][] = [
     ['Alert: Follow', ['AF0', 'TestFollow']],
-    ['Alert: Sub', ['AS0', 'TestSub', 'New sub message']],
-    ['Alert: Resub', ['As12', 'TestResub', 'Resub message']],
+    ['Alert: Sub', ['AS0', 'TestSub', 'Nèw súb mésságê']],
+    ['Alert: Resub', ['As12', 'TestResub', 'Rèsúb mésságê']],
     ['Alert: Gift', ['AG10', 'TestGiftSub']],
-    ['Alert: Cheer', ['AC1000', 'TestCheer', 'Cheer message']],
-    ['Alert: Raid', ['AR10000', 'TestRaid', 'Raid Test']],
+    ['Alert: Cheer', ['AC1000', 'TestCheer', 'Chêér mèsságë']],
+    ['Alert: Raid', ['AR10000', 'TestRaid', 'Rãíd Tèst']],
     ['Label: Follow', ['LF0', 'TestFollow']],
     ['Label: Sub', ['LS0', 'TestSub']],
     ['Label: Resub', ['Ls24', 'TestResub']],
