@@ -35,7 +35,7 @@ jobs:
         run: npm run build
       - name: Build frontend
         if: ${{ github.ref != 'refs/heads/master' }}
-        run: npm run build -- -base=/comboio-alerts/branch/${{ github.ref_name }}
+        run: npm run build -- --base=/comboio-alerts/branch/${{ github.ref_name }}
       - name: Multipages
         uses: rkdarst/gh-pages-multibranch@main
         with:
