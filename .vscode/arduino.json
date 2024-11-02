@@ -1,5 +1,6 @@
 {
-    "board": "arduino:avr:uno",
+    "board": "arduino:avr:mega",
+    "configuration": "cpu=atmega2560",
     "output": "build",
     "sketch": "firmware\\firmware.ino"
 }

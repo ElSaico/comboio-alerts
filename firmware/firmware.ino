@@ -92,6 +92,7 @@ void setup() {
   beginLabel(ZONE_FOLLOW);
   beginLabel(ZONE_SUB);
   beginLabel(ZONE_CHEER);
+  Serial.println(F("Hello 2560"));
 }
 
 void setAlert(uint32_t num) {

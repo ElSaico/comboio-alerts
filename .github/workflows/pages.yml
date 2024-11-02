@@ -1,9 +1,6 @@
 name: Github Pages
 
-on:
-  push:
-    branches: ["master"]
-  workflow_dispatch:
+on: [push, workflow_dispatch]
 
 permissions:
   contents: read
@@ -18,11 +15,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     environment:
-      name: demo
-      url: ${{ steps.deploy_to_pages.outputs.github_pages_url }}
+      name: ${{ github.ref_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
       - name: Setup Arduino CLI
         uses: arduino/setup-arduino-cli@v2
       - name: Install firmware dependencies
@@ -31,7 +29,21 @@ jobs:
           arduino-cli core install arduino:avr
           arduino-cli lib install MD_Parola
       - name: Build firmware
-        run: arduino-cli compile -b arduino:avr:uno --build-path ./build ./firmware
-      - name: Deploy to Pages
-        uses: skywarth/vite-github-pages-deployer@v1.4.0
-        id: deploy_to_pages
+        run: arduino-cli compile -b arduino:avr:mega --build-path ./build ./firmware
+      - name: Install frontend dependencies
+        run: npm install
+      - name: Build frontend
+        run: npm run build
+      - name: Multipages
+        uses: rkdarst/gh-pages-multibranch@main
+        if: ${{ github.event_name == 'push' }}
+        with:
+          directory: dist
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.event_name == 'push' }}
+        with:
+          publish_branch: gh-pages
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dist/
+          force_orphan: true
