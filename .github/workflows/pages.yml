@@ -1,11 +1,9 @@
 name: Github Pages
 
-on: [push, workflow_dispatch]
+on: [push]
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: "pages"
@@ -36,12 +34,11 @@ jobs:
         run: npm run build
       - name: Multipages
         uses: rkdarst/gh-pages-multibranch@main
-        if: ${{ github.event_name == 'push' }}
         with:
+          default_branch: master
           directory: dist
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
-        if: ${{ github.event_name == 'push' }}
         with:
           publish_branch: gh-pages
           github_token: ${{ secrets.GITHUB_TOKEN }}
