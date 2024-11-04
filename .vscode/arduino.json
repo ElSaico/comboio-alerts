@@ -1,5 +1,5 @@
 {
-    "board": "arduino:avr:uno",
+    "board": "arduino:mbed_rp2040:pico",
     "output": "build",
     "sketch": "firmware\\firmware.ino"
 }

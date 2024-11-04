@@ -1,9 +1,13 @@
 <script lang="ts">
-  import AVRRunner from './execute';
+  import { ConsoleLogger, LogLevel, Simulator } from 'rp2040js';
+
+  import { bootromB1 } from './bootrom';
+  import { loadHex } from './intelhex';
   import matrix from './matrix.svelte';
   import LedMatrix from './LedMatrix.svelte';
-  import firmwareUrl from '../build/firmware.ino.with_bootloader.bin?url';
+  import hex from './public/firmware.ino.hex?raw';
 
+  const BASE_ADDRESS = 0x10000000;
   const messages: [string, string[]][] = [
     ['Alert: Follow', ['AF0', 'TestFollow']],
     ['Alert: Sub', ['AS0', 'TestSub', 'Nèw súb mésságê']],
@@ -16,34 +20,30 @@
     ['Label: Resub', ['Ls24', 'TestResub']],
     ['Label: Cheer', ['LC1000', 'TestCheer']],
   ];
-  let runner: AVRRunner;
+  const runner = new Simulator();
   let serial: string = $state('');
   let serialEl: HTMLPreElement = $state()!;
 
-  fetch(firmwareUrl).then(async response => {
-    const firmware = await response.arrayBuffer();
-    runner = new AVRRunner(new Uint16Array(firmware));
+  runner.rp2040.loadBootrom(bootromB1);
+  runner.rp2040.logger = new ConsoleLogger(LogLevel.Debug);
+  loadHex(hex, runner.rp2040.flash, BASE_ADDRESS);
 
-    runner.spi.onByte = value => {
-      matrix.set(value);
-      runner.spi.completeTransfer(value);
-    };
+  runner.rp2040.spi[0].onTransmit = value => {
+    matrix.set(value);
+    runner.rp2040.spi[0].completeTransmit(value);
+  };
 
-    runner.usart.onLineTransmit = line => {
-      serial += `${line}\n`;
-    };
+  runner.rp2040.uart[0].onByte = value => {
+    serial += value;
+  };
 
-    runner.execute(() => {});
-
-    return () => {
-      runner.stop();
-    };
-  });
+  runner.rp2040.core.PC = BASE_ADDRESS;
+  runner.execute();
 
   function sendCommands(commands: string[]) {
     for (const command of commands) {
       serial += `>> ${command}\n`;
-      runner.serialWrite(`${command}\n`);
+      //runner.serialWrite(`${command}\n`);
     }
   }
 
