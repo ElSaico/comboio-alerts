@@ -5,7 +5,9 @@
 #include "fonts.hpp"
 
 #define BAUD_RATE      9600
-#define CS_PIN         10
+#define CS_PIN         12
+#define CLK_PIN        18
+#define DATA_PIN       19
 
 #define NUM_ZONES      4
 #define NUM_MODULES    54
