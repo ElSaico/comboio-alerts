@@ -5,7 +5,7 @@
   import { loadHex } from './intelhex';
   import matrix from './matrix.svelte';
   import LedMatrix from './LedMatrix.svelte';
-  import hex from './public/firmware.ino.hex?raw';
+  import hex from './public/firmware.hex?raw';
 
   const BASE_ADDRESS = 0x10000000;
   const messages: [string, string[]][] = [
