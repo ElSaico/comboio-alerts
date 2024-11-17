@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import MemoryMap from 'nrf-intel-hex';
 
 export interface IHexiResult {
   stdout: string;
@@ -21,12 +20,11 @@ fetch(BUILD_URL, {
   },
   body: JSON.stringify({
     sketch: firmware,
-    board: 'uno',
+    board: 'wokwi-pi-pico',
     files: [
       { name: 'fonts.hpp', content: fonts },
       { name: 'libraries.txt', content: 'MD_Parola' }
-    ],
-    options: { ramSize: 32768 }
+    ]
   })
 }).then(async response => {
   const result: IHexiResult = await response.json();
@@ -34,7 +32,6 @@ fetch(BUILD_URL, {
     console.log(result.stdout);
     console.error(result.stderr);
   } else {
-    const memMap = MemoryMap.fromHex(result.hex);
-    fs.writeFileSync(path.resolve(import.meta.dirname, '../public/firmware.bin'), memMap.get(0)!);
+    fs.writeFileSync(path.resolve(import.meta.dirname, '../public/firmware.hex'), result.hex);
   }
 });
