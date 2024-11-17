@@ -2,7 +2,6 @@
   import AVRRunner from './execute';
   import matrix from './matrix.svelte';
   import LedMatrix from './LedMatrix.svelte';
-  import firmwareUrl from '../build/firmware.ino.with_bootloader.bin?url';
 
   const messages: [string, string[]][] = [
     ['Alert: Follow', ['AF0', 'TestFollow']],
@@ -20,7 +19,7 @@
   let serial: string = $state('');
   let serialEl: HTMLPreElement = $state()!;
 
-  fetch(firmwareUrl).then(async response => {
+  fetch('./firmware.bin').then(async response => {
     const firmware = await response.arrayBuffer();
     runner = new AVRRunner(new Uint16Array(firmware));
 
